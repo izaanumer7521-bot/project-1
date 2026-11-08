@@ -1,0 +1,3 @@
+{"version":"2.0.0","tasks":[
+{"label":"Install everything","type":"shell","command":"npm run setup","problemMatcher":[]},
+{"label":"Run ByDoor (API + Website)","type":"shell","command":"npm run dev","problemMatcher":[],"isBackground":true}]}
