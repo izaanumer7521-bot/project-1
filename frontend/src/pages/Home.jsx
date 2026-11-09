@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, CATS, PHONES } from '../utils/api.js';
 import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import BannerSlider from '../components/BannerSlider.jsx';
 
-const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '' };
+const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100 };
 const ICON = { orders: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 7h6M9 11h6'], heart: ['M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z'], pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'], user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'], bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'], help: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'], info: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M12 16v-4M12 8h.01'], shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'M9 12l2 2 4-4'], file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6M16 13H8M16 17H8'], logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5M21 12H9'], down: ['M12 3v12M7 10l5 5 5-5M5 21h14'] };
 const Ico = ({ n }) => <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICON[n].map((d, i) => <path key={i} d={d} />)}</svg>;
 const TABS = [['home', '🏠', 'Home'], ['categories', '🗂️', 'Categories'], ['orders', '🧾', 'Orders'], ['cart', '🛒', 'Cart'], ['profile', '👤', 'Profile']];
@@ -41,12 +41,12 @@ export default function Home() {
   const list = cats.length ? cats : CATS.map(([key, emoji, name]) => ({ key, emoji, name }));
   const emojiOf = k => list.find(c => c.key === k)?.emoji;
   const nav = (v, extra = {}) => { const s = { v, ...extra }; history.pushState(s, ''); setView(s); scrollTo(0, 0); };
-  const items = Object.values(cart), count = items.reduce((s, i) => s + i.qty, 0), total = items.reduce((s, i) => s + i.qty * i.price, 0);
+  const items = Object.values(cart), count = items.reduce((s, i) => s + i.qty, 0), total = items.reduce((s, i) => s + i.qty * i.price, 0), fee = Number(S.deliveryFee ?? 100), grand = total + fee;
   const add = (p, d = 1) => { setCart(c => { const n = { ...c }, qty = (c[p._id]?.qty || 0) + d; if (qty <= 0) delete n[p._id]; else n[p._id] = { _id: p._id, name: p.name, price: p.price, qty, emoji: emojiOf(p.category), image: p.image }; return n; }); if (d > 0) { setToast(p.name + ' added'); setTimeout(() => setToast(''), 1100); } };
   const install = async () => { if (inst) { inst.prompt(); await inst.userChoice; setInst(null); } else setHelp(true); };
   const order = async e => {
     e.preventDefault(); setBusy(true); setMsg('');
-    try { const d = await api('orders', 'POST', { ...f, phone: user || f.phone, items: items.map(({ name, price, qty }) => ({ name, price, qty })) });
+    try { const d = await api('orders', 'POST', { ...f, phone: user || f.phone, items: items.map(({ _id, name, qty }) => ({ _id, name, qty })), ...(profile?.lat != null && f.address.trim() === (profile.street || '').trim() ? { lat: profile.lat, lng: profile.lng } : {}) });
       localStorage.setItem('bd_orders', JSON.stringify([d._id, ...jget('bd_orders', [])].slice(0, 30))); setCart({}); setPlaced(d); } catch (x) { setMsg(x.message); } setBusy(false);
   };
 
@@ -85,15 +85,20 @@ export default function Home() {
   else if (view.v === 'catalog') { const c = list.find(x => x.key === view.c), ps = avail.filter(p => p.category === view.c);
     page = (<>{back(c?.name || 'Products')}{ps.length ? <div className="pgrid">{ps.map(p => pcard(p))}</div> : <p className="muted">No items here yet. Call us on {S.phone2} and we will get it for you.</p>}</>); }
   else if (view.v === 'cart') page = (<>{back('My Cart')}
-    {placed ? <div className="okcard"><div>✅</div><h3>Order placed!</h3><p>We will call you shortly to confirm. Total {rs(placed.total)}.</p><button className="btn" onClick={() => { setPlaced(null); nav('orders'); }}>Track my order</button></div> :
+    {placed ? <div className="receipt"><div className="rc-ok"><div>✅</div><h3>Order placed!</h3><p>Your order has been sent to us. We will call you shortly to confirm.</p></div>
+      <div className="rc-card"><div className="rc-h"><b>Order #{placed._id.slice(-5).toUpperCase()}</b><small>{new Date(placed.createdAt).toLocaleString()}</small></div>
+        <div className="rc-sec"><small>DELIVER TO</small><b>{placed.name}</b><p>{placed.phone}</p><p>{placed.address}</p>{placed.note && <p>Note: {placed.note}</p>}</div>
+        <div className="rc-sec"><small>ORDER DETAILS</small>{placed.items.map((i, k) => <div className="rc-row" key={k}><span>{i.name} <em>× {i.qty}</em></span><b>{rs(i.price * i.qty)}</b></div>)}</div>
+        <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div></div></div>
+      <div className="row"><button className="btn" onClick={() => { setPlaced(null); nav('orders'); }}>Track my order</button><button className="btn ghost" onClick={() => { setPlaced(null); nav('home'); }}>Continue shopping</button></div></div> :
     !items.length ? <div className="empty"><div>🛒</div><p>Your cart is empty</p><button className="btn" onClick={() => nav('categories')}>Start shopping</button></div> : <>
       <div className="cl">{items.map(i => <div key={i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}</div></div>)}</div>
-      <form className="checkout" onSubmit={order}><p className="tot">Total: {rs(total)}</p>
+      <form className="checkout" onSubmit={order}><div className="sumbox"><div><span>Subtotal</span><b>{rs(total)}</b></div><div><span>Delivery charges</span><b>{rs(fee)}</b></div><div className="grand"><span>Total</span><b>{rs(grand)}</b></div></div>
         <input required placeholder="Your name" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
         <input required inputMode="tel" placeholder="Phone number" value={user || f.phone || ''} readOnly={!!user} onChange={e => setF({ ...f, phone: e.target.value })} />
         <textarea required placeholder="Delivery address" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} />
         <input placeholder="Note (optional)" value={f.note} onChange={e => setF({ ...f, note: e.target.value })} />
-        {msg && <p className="err">{msg}</p>}<button className="btn big" disabled={busy}>{busy ? 'Placing…' : 'Place order'}</button></form></>}</>);
+        {msg && <p className="err">{msg}</p>}<button className="btn big" disabled={busy}>{busy ? 'Placing…' : 'Place order · ' + rs(grand)}</button></form></>}</>);
   else if (view.v === 'orders') page = (<>{back('My Orders')}{orders === null ? <p className="muted">Loading…</p> : !orders.length ? <div className="empty"><div>🧾</div><p>No orders yet</p><button className="btn" onClick={() => nav('categories')}>Order now</button></div> :
     orders.map(o => <div key={o._id} className="ocard"><div className="oh"><b>Order #{o._id.slice(-5).toUpperCase()}</b><span className="chip2" data-s={o.status}>{o.status}</span></div><small>{new Date(o.createdAt).toLocaleString()}</small>
       <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')}</p><b>{rs(o.total)}</b></div>)}</>);
