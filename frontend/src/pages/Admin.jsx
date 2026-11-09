@@ -27,6 +27,10 @@ function Orders() {
     <select value={o.status} onChange={async e => { await api('orders/' + o._id, 'PUT', { status: e.target.value }); load(); }}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(s => <option key={s}>{s}</option>)}</select>
     <button onClick={async () => { await api('orders/' + o._id, 'DELETE'); load(); }}>Delete</button></div>)}{!rows.length && <p>No orders yet.</p>}</div>);
 }
+function Customers() {
+  const [rows, setRows] = useState([]); useEffect(() => { api('customers').then(setRows); }, []);
+  return (<div className="list">{rows.map(c => <div key={c._id} className="li"><b>{c.phone}</b><small>{new Date(c.createdAt).toLocaleString()}</small></div>)}{!rows.length && <p>No signups yet.</p>}</div>);
+}
 function Account({ email, setEmail }) {
   const [f, setF] = useState({ currentPassword: '', email, newPassword: '' }), [m, setM] = useState('');
   const save = async e => { e.preventDefault(); try { const d = await api('admin/account', 'PUT', f); setEmail(d.email); setM('Saved. Use the new details next time you log in.'); setF({ ...f, currentPassword: '', newPassword: '' }); } catch (x) { setM(x.message); } };
@@ -45,7 +49,7 @@ export default function Admin() {
     <input type="password" required placeholder="Password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} />
     {err && <p className="err">{err}</p>}<button className="btn">Sign in</button></form></div>);
   return (<div className="adm"><aside><Logo small /><small>{email}</small>
-    {[['orders', 'Orders'], ['products', 'Products'], ['banners', 'Banners'], ['reviews', 'Reviews'], ['account', 'Account']].map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
+    {[['orders', 'Orders'], ['products', 'Products'], ['banners', 'Banners'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['account', 'Account']].map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
     <button onClick={() => { localStorage.removeItem('bd_token'); setEmail(null); }}>Log out</button></aside>
-    <main><h2>{tab[0].toUpperCase() + tab.slice(1)}</h2>{tab === 'orders' ? <Orders /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
+    <main><h2>{tab[0].toUpperCase() + tab.slice(1)}</h2>{tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }

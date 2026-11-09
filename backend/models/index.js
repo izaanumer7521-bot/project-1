@@ -6,3 +6,4 @@ export const Banner = mk('Banner', { title: String, subtitle: String, image: Str
 export const Product = mk('Product', { name: String, category: String, price: Number, unit: String, image: String, description: String, available: { type: Boolean, default: true } });
 export const Review = mk('Review', { name: String, rating: { type: Number, default: 5 }, text: String });
 export const Order = mk('Order', { name: String, phone: String, address: String, note: String, items: [{ name: String, price: Number, qty: Number }], total: Number, status: { type: String, default: 'New' } });
+export const Customer = mk('Customer', { phone: { type: String, unique: true }, name: String });

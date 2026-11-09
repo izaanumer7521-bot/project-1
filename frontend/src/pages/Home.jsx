@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'; import { api, CATS, PHONES } from '../utils/api.js'; import Logo from '../components/Logo.jsx';
+import { useEffect, useState } from 'react'; import { api, CATS, PHONES } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx';
 const wa = `https://wa.me/92${PHONES[0].slice(1)}`;
 export default function Home() {
   const [banners, setB] = useState([]), [products, setP] = useState([]), [reviews, setR] = useState([]);
   const [cat, setCat] = useState('all'), [cart, setCart] = useState({}), [open, setOpen] = useState(false), [bi, setBi] = useState(0);
-  const [f, setF] = useState({ name: '', phone: '', address: '', note: '' }), [msg, setMsg] = useState('');
+  const [show, setShow] = useState(!sessionStorage.getItem('bd_splash')), [help, setHelp] = useState(false), [inst, setInst] = useState(null), [done, setDone] = useState(matchMedia('(display-mode: standalone)').matches);
+  const [f, setF] = useState({ name: '', phone: localStorage.getItem('bd_user') || '', address: '', note: '' }), [msg, setMsg] = useState('');
   useEffect(() => { api('banners').then(d => setB(d.filter(b => b.active))); api('products').then(setP); api('reviews').then(setR); }, []);
+  useEffect(() => { const h = e => { e.preventDefault(); setInst(e); }; addEventListener('beforeinstallprompt', h); addEventListener('appinstalled', () => setDone(true)); return () => removeEventListener('beforeinstallprompt', h); }, []);
+  const install = async () => { if (inst) { inst.prompt(); await inst.userChoice; setInst(null); } else setHelp(true); };
   useEffect(() => { const t = setInterval(() => setBi(i => i + 1), 5000); return () => clearInterval(t); }, []);
   const shown = products.filter(p => p.available && (cat === 'all' || p.category === cat));
   const items = Object.values(cart), count = items.reduce((s, i) => s + i.qty, 0), total = items.reduce((s, i) => s + i.qty * i.price, 0);
@@ -12,8 +15,9 @@ export default function Home() {
   const order = async e => { e.preventDefault(); try { await api('orders', 'POST', { ...f, items }); setCart({}); setMsg('Order placed! We will call you shortly to confirm.'); } catch (x) { setMsg(x.message); } };
   const b = banners.length ? banners[bi % banners.length] : null;
   return (<>
+    {show && <Welcome needAuth={!localStorage.getItem('bd_user') && !localStorage.getItem('bd_skip')} onDone={() => setShow(false)} />}
     <header className="top"><Logo small /><nav><a href="#services">Services</a><a href="#menu">Order</a><a href="#reviews">Reviews</a><a href="#contact">Contact</a></nav>
-      <button className="cartbtn" onClick={() => setOpen(true)}>🛒 Cart ({count})</button></header>
+      <div className="acts">{!done && <button className="instbtn" onClick={install}>⬇ <span>Install app</span></button>}<button className="cartbtn" onClick={() => setOpen(true)}>🛒 <span>Cart</span> ({count})</button></div></header>
     <section className="hero" style={b?.image ? { backgroundImage: `linear-gradient(90deg,#0b3d1f ,#0b3d1fcc 45%,transparent),url(${b.image})` } : {}}>
       <div className="wrap"><p className="chip">Online Shopping Made Easy</p><h1>{b?.title || 'Har Zaroorat, Ab Aapke Ghar Tak!'}</h1><p>{b?.subtitle}</p>
         <div className="row"><a className="btn" href="#menu">Order now</a><a className="btn ghost" href={`tel:${PHONES[1]}`}>Call {PHONES[1]}</a></div>
@@ -34,6 +38,8 @@ export default function Home() {
     <footer id="contact"><div className="wrap fgrid"><div><Logo /><p>Aapki Zaroorat, Hamari Zimmedari.</p></div>
       <div><h4>Call now</h4>{PHONES.map(p => <a key={p} href={`tel:${p}`}>{p}</a>)}<a href={wa}>WhatsApp us</a></div><div><h4>Hours</h4><p>7 AM – 12 AM</p><p>Vihari City</p></div></div>
       <p className="copy">Order Now · Reliable · Quick · Trusted · ByDoor EXPRESS</p></footer>
+    <nav className="bnav"><a href="#top">🏠<span>Home</span></a><a href="#services">🧾<span>Services</span></a><a href="#menu">🛍️<span>Order</span></a><a href="#reviews">⭐<span>Reviews</span></a><button onClick={() => setOpen(true)}>🛒<span>Cart{count ? ` (${count})` : ''}</span></button></nav>
+    {help && <div className="drawer center"><div className="dbg" onClick={() => setHelp(false)} /><aside className="sheet"><h3>Install ByDoor app</h3><p><b>iPhone (Safari):</b> tap the Share button, then “Add to Home Screen”.</p><p><b>Android (Chrome):</b> tap the ⋮ menu, then “Install app” or “Add to Home screen”.</p><button className="btn" onClick={() => setHelp(false)}>Got it</button></aside></div>}
     {open && <div className="drawer"><div className="dbg" onClick={() => setOpen(false)} /><aside><h3>Your cart <button onClick={() => setOpen(false)}>✕</button></h3>
       {items.map(i => <div key={i._id} className="ci"><span>{i.name} × {i.qty}</span><b>Rs {i.qty * i.price}</b></div>)}{!items.length && <p>{msg || 'Your cart is empty.'}</p>}
       {!!items.length && <form onSubmit={order}><p className="tot">Total: Rs {total}</p>
