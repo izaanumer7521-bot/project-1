@@ -24,20 +24,27 @@ export const orderText = o => [
   `*TOTAL: ${rs(o.total)}*`,
 ].join('\n');
 
+const clean = t => String(t || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220);
+
+// Returns { ok, reason, provider } and never throws
 export async function notifyOwner(order) {
-  const text = orderText(order), ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 7000);
+  const text = orderText(order), ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
   try {
     if (process.env.CALLMEBOT_APIKEY) {
-      const r = await fetch(`https://api.callmebot.com/whatsapp.php?phone=${TO}&text=${encodeURIComponent(text)}&apikey=${process.env.CALLMEBOT_APIKEY}`, { signal: ctl.signal });
-      if (!r.ok) console.error('CallMeBot error:', r.status, (await r.text()).slice(0, 200)); return r.ok;
+      const key = process.env.CALLMEBOT_APIKEY.trim(), r = await fetch(`https://api.callmebot.com/whatsapp.php?phone=${TO}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(key)}`, { signal: ctl.signal });
+      const body = clean(await r.text()), bad = !r.ok || /error|invalid|not\s+(found|allowed|activated)|blocked|wrong/i.test(body);
+      if (bad) console.error('CallMeBot error:', r.status, body);
+      return { ok: !bad, provider: 'callmebot', reason: bad ? `CallMeBot (${r.status}): ${body || 'no reply'}` : '' };
     }
     if (process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_ID) {
       const r = await fetch(`https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`, {
         method: 'POST', signal: ctl.signal, headers: { Authorization: 'Bearer ' + process.env.WHATSAPP_TOKEN, 'Content-Type': 'application/json' },
         body: JSON.stringify({ messaging_product: 'whatsapp', to: TO, type: 'text', text: { body: text } }) });
-      if (!r.ok) console.error('WhatsApp Cloud API error:', r.status, (await r.text()).slice(0, 300)); return r.ok;
+      const body = clean(await r.text()); if (!r.ok) console.error('WhatsApp Cloud API error:', r.status, body);
+      return { ok: r.ok, provider: 'cloud', reason: r.ok ? '' : `WhatsApp Cloud API (${r.status}): ${body}` };
     }
-    console.warn('WhatsApp not configured: set CALLMEBOT_APIKEY (or WHATSAPP_TOKEN + WHATSAPP_PHONE_ID)'); return false;
-  } catch (e) { console.error('WhatsApp notify failed:', e.message); return false; }
+    console.warn('WhatsApp not configured');
+    return { ok: false, provider: 'none', reason: 'Not configured: the server has no CALLMEBOT_APIKEY (add it in Vercel > Settings > Environment Variables, then redeploy)' };
+  } catch (e) { console.error('WhatsApp notify failed:', e.message); return { ok: false, provider: 'error', reason: e.name === 'AbortError' ? 'Timed out reaching the WhatsApp service' : e.message }; }
   finally { clearTimeout(timer); }
 }

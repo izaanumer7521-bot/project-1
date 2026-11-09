@@ -14,8 +14,14 @@ r.post('/', wrap(async (q, s) => {
   const subtotal = lines.reduce((x, i) => x + i.price * i.qty, 0), fee = Number((await Setting.findOne())?.deliveryFee ?? 100), delivery = Number.isFinite(fee) && fee >= 0 ? fee : 100;
   const lat = Number(q.body.lat), lng = Number(q.body.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
   const order = await Order.create({ name, phone, address, note, items: lines, subtotal, delivery, total: subtotal + delivery, ...geo });
-  const notified = await notifyOwner(order); // awaited so it also works on Vercel serverless
-  s.json({ ...order.toObject(), notified });
+  const n = await notifyOwner(order); // awaited so it also works on Vercel serverless
+  order.notified = n.ok; order.notifyError = n.ok ? '' : n.reason; await order.save();
+  s.json(order.toObject());
+}));
+r.post('/test-whatsapp', auth, wrap(async (q, s) => s.json(await notifyOwner({ _id: new mongoose.Types.ObjectId(), createdAt: new Date(), name: 'TEST ORDER', phone: '03000000000', address: 'This is a test message from your ByDoor admin panel', items: [{ name: 'Test item', price: 1, qty: 1 }], subtotal: 1, delivery: 100, total: 101 }))));
+r.post('/:id/notify', auth, wrap(async (q, s) => {
+  const o = await Order.findById(q.params.id); if (!o) return s.status(404).json({ ok: false, reason: 'Order not found' });
+  const n = await notifyOwner(o); o.notified = n.ok; o.notifyError = n.ok ? '' : n.reason; await o.save(); s.json(n);
 }));
 r.get('/', auth, wrap(async (q, s) => s.json(await Order.find().sort({ createdAt: -1 }))));
 r.put('/:id', auth, wrap(async (q, s) => s.json(await Order.findByIdAndUpdate(q.params.id, { status: q.body.status }, { new: true }))));

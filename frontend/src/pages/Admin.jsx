@@ -16,9 +16,10 @@ const SET = [['area', 'Delivering to (area)'], ['deliveryTitle', 'Delivery headl
 function Settings() {
   const [f, setF] = useState(null), [m, setM] = useState(''); useEffect(() => { api('settings').then(setF); }, []);
   const save = async e => { e.preventDefault(); try { setF(await api('settings', 'PUT', f)); setM('Saved. The app shows the new settings now.'); } catch (x) { setM(x.message); } };
+  const test = async () => { setM('Sending test message…'); try { const d = await api('orders/test-whatsapp', 'POST'); setM(d.ok ? '✅ Test message sent. Check your WhatsApp now.' : '❌ Failed: ' + d.reason); } catch (x) { setM(x.message); } };
   if (!f) return <p>Loading…</p>;
   return (<form className="card narrow" onSubmit={save}><h3>App settings</h3>{SET.map(([k, l, t]) => <label key={k}>{l}{t === 'area' ? <textarea rows="4" value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} /> : <input value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} />}</label>)}
-    {m && <p className="err">{m}</p>}<button className="btn">Save settings</button></form>);
+    {m && <p className="err">{m}</p>}<button className="btn">Save settings</button><button type="button" className="btn ghost" onClick={test}>Send test WhatsApp message</button></form>);
 }
 function Crud({ path }) {
   const fields = SCHEMA[path], blank = Object.fromEntries(fields.map(([k, , t]) => [k, t === 'bool' ? true : '']));
@@ -39,7 +40,9 @@ function Crud({ path }) {
 function Orders() {
   const [rows, setRows] = useState([]); const load = () => api('orders').then(setRows); useEffect(() => { load(); }, []);
   return (<div className="list">{rows.map(o => <div key={o._id} className="card"><b>{o.name} · {o.phone}</b><p>{o.address}{o.note && ` (${o.note})`}</p>
-    <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>Rs {o.total}</b></p>
+    <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>Rs {o.total}</b>{o.delivery != null && <small> (incl. Rs {o.delivery} delivery)</small>}</p>
+    <p><small>WhatsApp: {o.notified ? '✅ sent' : '❌ not sent' + (o.notifyError ? ' – ' + o.notifyError : '')}</small></p>
+    {!o.notified && <button onClick={async () => { const d = await api(`orders/${o._id}/notify`, 'POST'); alert(d.ok ? 'Sent to WhatsApp' : 'Failed: ' + d.reason); load(); }}>Resend to WhatsApp</button>}
     <select value={o.status} onChange={async e => { await api('orders/' + o._id, 'PUT', { status: e.target.value }); load(); }}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(s => <option key={s}>{s}</option>)}</select>
     <button onClick={async () => { await api('orders/' + o._id, 'DELETE'); load(); }}>Delete</button></div>)}{!rows.length && <p>No orders yet.</p>}</div>);
 }
