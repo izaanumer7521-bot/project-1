@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'; import { api } from '../utils/api.js';
 const ROWS = [['🍚','🥛','🧈','🍞','☕','🧂','🍅','🥚'], ['🥩','🍗','🥬','🍎','🍋','🧅','🥔','🥕'], ['🥤','🧃','🍫','🍪','🍕','🍔','🧴','🧼']];
-export default function Welcome({ needAuth, onDone }) {
-  const [stage, setStage] = useState('splash'), [mode, setMode] = useState('signup'), [phone, setPhone] = useState(''), [err, setErr] = useState(''), [busy, setBusy] = useState(false), [out, setOut] = useState(false);
+export default function Welcome({ needAuth, onDone, startAuth }) {
+  const [stage, setStage] = useState(startAuth ? 'auth' : 'splash'), [mode, setMode] = useState('signup'), [phone, setPhone] = useState(''), [err, setErr] = useState(''), [busy, setBusy] = useState(false), [out, setOut] = useState(false);
   const finish = () => { sessionStorage.setItem('bd_splash', '1'); setOut(true); setTimeout(onDone, 450); };
-  useEffect(() => { const t = setTimeout(() => (needAuth ? setStage('auth') : finish()), 2300); return () => clearTimeout(t); }, []);
+  useEffect(() => { if (startAuth) return; const t = setTimeout(() => (needAuth ? setStage('auth') : finish()), 2300); return () => clearTimeout(t); }, []);
   const skip = () => { localStorage.setItem('bd_skip', '1'); finish(); };
   const submit = async e => {
     e.preventDefault(); setBusy(true); setErr('');
