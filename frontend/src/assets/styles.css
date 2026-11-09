@@ -122,3 +122,46 @@ html{scroll-behavior:smooth;scroll-padding-top:80px}body{-webkit-tap-highlight-c
 .imgin img{max-width:100%;max-height:130px;border-radius:12px;margin:6px 0;display:block}.imgin input[type=file]{padding:8px}.imgin button{border:1px solid #cfe8c6;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer}
 .lt{display:flex;gap:10px;align-items:center;min-width:0}.lt img{width:46px;height:46px;object-fit:cover;border-radius:10px}.lt em{font-style:normal;font-size:1.6rem}.lt span{display:block;min-width:0}
 input[type=checkbox]{width:auto!important;margin-left:10px!important;transform:scale(1.3)}
+
+/* ===== Profile page (new) ===== */
+.pcard h3{margin:0 0 2px}.pcard p{margin:0;color:#6a7b70;font-size:.9rem}
+.pbanner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fbf4d6;border:1.5px solid #ecd98a;border-radius:20px;padding:14px;margin:0 0 14px;cursor:pointer;font:inherit;color:var(--ink)}
+.pbanner .bi{width:52px;height:52px;flex:0 0 52px;border-radius:16px;background:#f7e49a;color:#a86f00;display:grid;place-items:center}
+.pbanner .bt{flex:1;min-width:0}.pbanner b{display:block;font-size:1rem}.pbanner small{display:block;color:#6b6340;margin:2px 0 8px;line-height:1.3}
+.pbanner .bar{display:block;height:6px;border-radius:99px;background:#f0e2a4;overflow:hidden}.pbanner .bar u{display:block;height:100%;background:#e0a91d;border-radius:99px;transition:width .4s}
+.pbanner em{font-style:normal;font-size:1.6rem;color:#a86f00}
+.pstats{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border-radius:22px;padding:14px 4px;margin-bottom:14px;box-shadow:0 4px 18px #0b6b2e12;border:1px solid #e3eedd}
+.pstats div{text-align:center;border-left:1px solid #eef3ea}.pstats div:first-child{border:0}
+.pstats small{display:block;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:#6a7b70;font-weight:700}.pstats b{font-size:1.6rem}
+.pmenu{background:#fff;border-radius:24px;padding:6px 16px;margin-bottom:24px;border:1px solid #e3eedd}
+.pmenu button{display:flex;width:100%;align-items:center;gap:16px;padding:12px 0;border:0;border-bottom:1px solid #eef3ea;background:none;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
+.pmenu button:last-child{border:0}.pmenu b{flex:1;font-weight:600;font-size:1.02rem}.pmenu i{font-style:normal;font-size:1.5rem;color:#9aa6a0}
+.pmenu .ic{width:48px;height:48px;flex:0 0 48px;border-radius:15px;display:grid;place-items:center}
+.c-purple .ic{background:#efe7fc;color:#7c4dcc}.c-magenta .ic{background:#f8e5f7;color:#b83fb0}.c-red .ic{background:#fbe4ea;color:#d4294f}.c-indigo .ic{background:#e7e8fb;color:#5a4fcf}
+.c-pink .ic{background:#fde6f0;color:#d92b7d}.c-orange .ic{background:#fbeada;color:#d9822b}.c-teal .ic{background:#dbf0ec;color:#14907f}.c-blue .ic{background:#dcedf9;color:#1b7fc4}
+.c-gray .ic{background:#ececec;color:#666}.c-green .ic{background:#e0f2da;color:var(--g)}.c-out .ic{background:#fbe5e8;color:#d63a4a}.c-out b,.c-out i{color:#d63a4a}
+/* heart on product cards */
+.heart{position:absolute;right:8px;top:8px;width:32px;height:32px;border-radius:50%;border:0;background:#ffffffe6;color:#6a7b70;font-size:1.2rem;line-height:1;cursor:pointer;box-shadow:0 2px 8px #0002;display:grid;place-items:center}.heart.on{color:#e5483d}
+/* saved address card */
+.addr{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid #e3eedd;border-radius:20px;padding:16px}.addr>div{flex:1}.addr p{margin:4px 0}.addr small{color:#6a7b70}
+.addr .pin{width:46px;height:46px;flex:0 0 46px;border-radius:14px;background:#fbe4ea;color:#d4294f;display:grid;place-items:center}.def{font-style:normal;font-size:.7rem;background:#dff1d8;color:var(--g);border-radius:99px;padding:2px 8px;margin-left:8px}
+/* Update Profile Info bottom sheet */
+.psheet-wrap{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center}
+.psheet{position:relative;width:min(560px,100%);max-height:94vh;overflow:auto;background:#fff;border-radius:28px 28px 0 0;padding:10px 22px calc(22px + env(safe-area-inset-bottom));animation:sheetup .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
+.psheet .grab{display:block;width:44px;height:5px;border-radius:99px;background:#d3d8d5;margin:0 auto 14px}
+.psheet .phd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.psheet .phd h3{margin:0;font-size:1.3rem}
+.psheet .x{width:44px;height:44px;border-radius:50%;border:0;background:#f1f5f0;font-size:1.1rem;cursor:pointer;color:#444}
+.psheet label{display:block;font-weight:700;font-size:1.02rem;margin:14px 0 8px}.psheet .req{color:#d63a4a;margin-left:4px}
+.psheet input:not([type=checkbox]){display:block;width:100%;box-sizing:border-box;margin-top:8px;padding:15px 16px;font:inherit;font-weight:400;border:1.5px solid #e7ece7;border-radius:16px;background:#f7f9f6;color:var(--ink);outline:0}
+.psheet input:focus{border-color:var(--g);background:#fff}
+.two-in{display:grid;grid-template-columns:1fr 1fr;gap:14px}.two-in label{margin-top:6px}
+.psheet .help{margin:8px 2px 0;font-size:.88rem;color:#6a7b70}
+.locbox{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid #e7ece7;border-radius:16px;background:#f7f9f6}.locbox.on{border-color:#a9d1b3;background:#eff6f0}
+.locbox>div{flex:1;min-width:0}.locbox b{display:block;font-size:.98rem}.locbox small{display:block;color:#6a7b70;margin-top:2px}.locbox .pin{font-size:1.3rem}
+.locbox .chg{border:0;border-radius:99px;background:#dce9de;color:var(--g);font-weight:700;font-size:.95rem;padding:10px 18px;cursor:pointer}.locbox .chg:disabled{opacity:.6}
+.defrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 22px;padding-top:16px;border-top:1px solid #eef1ee}.defrow b{display:block}.defrow small{color:#6a7b70}
+.switch{flex:0 0 58px;width:58px;height:34px;border-radius:99px;border:0;background:#e3e5e8;padding:3px;cursor:pointer;transition:background .2s;display:flex;align-items:center}.switch i{width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 1px 4px #0004;transition:transform .2s}
+.switch.on{background:var(--g)}.switch.on i{transform:translateX(24px)}
+.psheet .btn.big{width:100%;margin-top:4px;border-radius:18px;padding:16px;font-size:1.05rem}
+@media(min-width:821px){.psheet-wrap{align-items:center}.psheet{border-radius:28px}}

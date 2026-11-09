@@ -1,5 +1,5 @@
 export const api = async (path, method = 'GET', body) => {
-  const t = localStorage.getItem('bd_token');
+  const t = localStorage.getItem(path.startsWith('customers/me') ? 'bd_ctoken' : 'bd_token');
   const r = await fetch('/api/' + path, { method, headers: { 'Content-Type': 'application/json', ...(t && { Authorization: 'Bearer ' + t }) }, body: body && JSON.stringify(body) });
   const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Something went wrong'); return d;
 };

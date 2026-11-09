@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api, CATS, PHONES } from '../utils/api.js';
-import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import BannerSlider from '../components/BannerSlider.jsx';
+import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import BannerSlider from '../components/BannerSlider.jsx';
 
-const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '' };
+const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '' };
+const ICON = { orders: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 7h6M9 11h6'], heart: ['M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z'], pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'], user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'], bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'], help: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'], info: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M12 16v-4M12 8h.01'], shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'M9 12l2 2 4-4'], file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6M16 13H8M16 17H8'], logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5M21 12H9'], down: ['M12 3v12M7 10l5 5 5-5M5 21h14'] };
+const Ico = ({ n }) => <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICON[n].map((d, i) => <path key={i} d={d} />)}</svg>;
 const TABS = [['home', '🏠', 'Home'], ['categories', '🗂️', 'Categories'], ['orders', '🧾', 'Orders'], ['cart', '🛒', 'Cart'], ['profile', '👤', 'Profile']];
 const rs = n => 'Rs ' + Number(n || 0).toLocaleString();
 const jget = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
@@ -14,6 +16,7 @@ export default function Home() {
   const [cart, setCart] = useState(() => jget('bd_cart', {})), [user, setUser] = useState(localStorage.getItem('bd_user')), [orders, setOrders] = useState(null), [placed, setPlaced] = useState(null);
   const [f, setF] = useState({ name: '', address: '', note: '' }), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
   const [show, setShow] = useState(!sessionStorage.getItem('bd_splash')), [authOpen, setAuthOpen] = useState(false), [help, setHelp] = useState(false), [inst, setInst] = useState(null);
+  const [profile, setProfile] = useState(null), [sheet, setSheet] = useState(false), [favs, setFavs] = useState(() => jget('bd_favs', []));
   const [done, setDone] = useState(matchMedia('(display-mode: standalone)').matches);
 
   useEffect(() => {
@@ -24,7 +27,16 @@ export default function Home() {
     return () => { removeEventListener('popstate', pop); removeEventListener('beforeinstallprompt', h); };
   }, []);
   useEffect(() => { localStorage.setItem('bd_cart', JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { if (view.v === 'orders') { const ids = jget('bd_orders', []); ids.length ? api('orders/lookup', 'POST', { ids }).then(setOrders).catch(() => setOrders([])) : setOrders([]); } }, [view.v]);
+  useEffect(() => { localStorage.setItem('bd_favs', JSON.stringify(favs)); }, [favs]);
+  // load the signed-in customer's profile (silently re-issues a token for accounts created before profiles existed)
+  useEffect(() => {
+    if (!user) { setProfile(null); return; } let dead = false;
+    const relog = async () => { const d = await api('customers/login', 'POST', { phone: user }); localStorage.setItem('bd_ctoken', d.token); };
+    (async () => { try { if (!localStorage.getItem('bd_ctoken')) await relog(); let p; try { p = await api('customers/me'); } catch { await relog(); p = await api('customers/me'); } if (!dead) setProfile(p); } catch {} })();
+    return () => { dead = true; };
+  }, [user]);
+  useEffect(() => { if (!profile) return; setF(x => ({ ...x, name: x.name || [profile.firstName, profile.lastName].filter(Boolean).join(' '), address: x.address || (profile.defaultAddress ? profile.street : '') })); }, [profile]);
+  useEffect(() => { if (view.v === 'orders' || view.v === 'notifications') { const ids = jget('bd_orders', []); ids.length ? api('orders/lookup', 'POST', { ids }).then(setOrders).catch(() => setOrders([])) : setOrders([]); } }, [view.v]);
 
   const list = cats.length ? cats : CATS.map(([key, emoji, name]) => ({ key, emoji, name }));
   const emojiOf = k => list.find(c => c.key === k)?.emoji;
@@ -38,9 +50,12 @@ export default function Home() {
       localStorage.setItem('bd_orders', JSON.stringify([d._id, ...jget('bd_orders', [])].slice(0, 30))); setCart({}); setPlaced(d); } catch (x) { setMsg(x.message); } setBusy(false);
   };
 
+  const toggleFav = p => setFavs(a => a.includes(p._id) ? a.filter(x => x !== p._id) : [...a, p._id]);
+  const welcomeDone = fresh => { setShow(false); setAuthOpen(false); setUser(localStorage.getItem('bd_user')); if (fresh) { nav('profile'); setSheet(true); } };
+  const logout = () => { localStorage.removeItem('bd_user'); localStorage.removeItem('bd_ctoken'); setUser(null); setProfile(null); };
   const qty = p => { const n = cart[p._id]?.qty || 0; return n ? <div className="qty"><button onClick={() => add(p, -1)}>−</button>{n}<button onClick={() => add(p)}>+</button></div> : null; };
   const pcard = (p, deal) => { const pct = p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0, n = cart[p._id]?.qty || 0;
-    return (<article className={'pc' + (deal ? ' deal' : '')} key={p._id}><div className="pci"><Thumb item={{ ...p, emoji: emojiOf(p.category) }} />{pct > 0 && <span className="off">⚡ {pct}% OFF</span>}
+    return (<article className={'pc' + (deal ? ' deal' : '')} key={p._id}><div className="pci"><Thumb item={{ ...p, emoji: emojiOf(p.category) }} />{pct > 0 && <span className="off">⚡ {pct}% OFF</span>}<button className={'heart' + (favs.includes(p._id) ? ' on' : '')} aria-label="Favourite" onClick={() => toggleFav(p)}>{favs.includes(p._id) ? '♥' : '♡'}</button>
       {!deal && (n ? <div className="mini">{qty(p)}</div> : <button className="plus" aria-label={'Add ' + p.name} onClick={() => add(p)}>+</button>)}</div>
       <h4>{p.name}</h4><small>{p.description}</small>
       <div className="pr"><b>{rs(p.price)}</b>{p.oldPrice > p.price && <s>{rs(p.oldPrice)}</s>}<em>{p.unit}</em></div>
@@ -82,26 +97,37 @@ export default function Home() {
   else if (view.v === 'orders') page = (<>{back('My Orders')}{orders === null ? <p className="muted">Loading…</p> : !orders.length ? <div className="empty"><div>🧾</div><p>No orders yet</p><button className="btn" onClick={() => nav('categories')}>Order now</button></div> :
     orders.map(o => <div key={o._id} className="ocard"><div className="oh"><b>Order #{o._id.slice(-5).toUpperCase()}</b><span className="chip2" data-s={o.status}>{o.status}</span></div><small>{new Date(o.createdAt).toLocaleString()}</small>
       <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')}</p><b>{rs(o.total)}</b></div>)}</>);
-  else if (view.v === 'page') { const T = { help: ['Help Center', S.helpText], about: ['About Us', S.aboutUs], privacy: ['Privacy Policy', S.privacy] }[view.page] || ['', ''];
+  else if (view.v === 'page') { const T = { help: ['Help Center', S.helpText], about: ['About Us', S.aboutUs], privacy: ['Privacy Policy', S.privacy], terms: ['Terms & Conditions', S.terms] }[view.page] || ['', ''];
     page = (<>{back(T[0])}<div className="doc"><p>{T[1]}</p>{view.page === 'help' && <div className="row"><a className="btn" href={`tel:${S.phone1}`}>📞 Call {S.phone1}</a><a className="btn orange" href={`https://wa.me/92${S.phone1.slice(1)}`}>WhatsApp</a></div>}</div></>); }
-  else page = (<>
-    <div className="phead"><h2>Profile</h2></div>
-    <div className="pcard"><div className="av">{user ? '😊' : '＋'}</div><div><h3>Hello, {user ? user : 'Guest'} 👋</h3><p>{user ? 'You are signed in.' : 'Sign in for a faster, personalised experience.'}</p></div>
-      {user ? <button className="btn big out" onClick={() => { localStorage.removeItem('bd_user'); setUser(null); }}>Log out</button> : <button className="btn big" onClick={() => setAuthOpen(true)}>Sign In / Register</button>}</div>
-    <div className="perks"><small>EXCLUSIVE PERKS</small>
-      {[['🏷️', 'Exclusive Deals & Offers', 'Special discounts and Hot Deals built for your area.'], ['🧾', 'Order Status Updates', 'See if your order is confirmed, on the way or delivered.'], ['⚡', 'Fast Checkout', 'Your mobile number is saved so ordering takes seconds.'], ['💬', 'Call & WhatsApp Support', `Talk to us any time, ${S.hours}.`]].map(([e, t, d]) => <div key={t} className="perk"><em>{e}</em><span><b>{t}</b><small>{d}</small></span></div>)}</div>
-    <div className="menu">{[['help', '❓', 'Help Center'], ['about', 'ℹ️', 'About Us'], ['privacy', '🛡️', 'Privacy Policy']].map(([k, e, t]) => <button key={k} onClick={() => nav('page', { page: k })}><em>{e}</em><b>{t}</b><i>›</i></button>)}
-      {!done && <button onClick={install}><em>⬇️</em><b>Install ByDoor app</b><i>›</i></button>}</div></>);
+  else if (view.v === 'favourites') { const fp = avail.filter(p => favs.includes(p._id));
+    page = (<>{back('My Favourites')}{fp.length ? <div className="pgrid">{fp.map(p => pcard(p))}</div> : <div className="empty"><div>♡</div><p>No favourites yet. Tap the heart on any product.</p><button className="btn" onClick={() => nav('categories')}>Browse products</button></div>}</>); }
+  else if (view.v === 'addresses') page = (<>{back('My Addresses')}{profile?.street ? <div className="addr"><span className="pin"><Ico n="pin" /></span><div><b>Delivery address{profile.defaultAddress && <em className="def">Default</em>}</b><p>{profile.street}</p><small>Pinned at {Number(profile.lat).toFixed(5)}, {Number(profile.lng).toFixed(5)}</small></div><button className="btn sm" onClick={() => setSheet(true)}>Edit</button></div> :
+    <div className="empty"><div>📍</div><p>{user ? 'You have not saved an address yet' : 'Sign in to save your delivery address'}</p><button className="btn" onClick={() => user ? setSheet(true) : setAuthOpen(true)}>{user ? 'Add address' : 'Sign In / Register'}</button></div>}</>);
+  else if (view.v === 'notifications') page = (<>{back('Notifications')}{orders === null ? <p className="muted">Loading…</p> : !orders.length ? <div className="empty"><div>🔔</div><p>No notifications yet. Order updates will appear here.</p></div> :
+    orders.map(o => <div key={o._id} className="ocard"><div className="oh"><b>Order #{o._id.slice(-5).toUpperCase()}</b><span className="chip2" data-s={o.status}>{o.status}</span></div><small>{new Date(o.updatedAt || o.createdAt).toLocaleString()}</small><p>Your order is now <b>{o.status}</b>.</p></div>)}</>);
+  else { const pname = profile && (profile.firstName || profile.lastName) ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') : user;
+    const have = profile ? [profile.firstName, profile.lastName, profile.street, profile.email].filter(Boolean).length : 0, incomplete = !!user && !!profile && !(profile.firstName && profile.lastName && profile.street);
+    const rows = [['orders', 'My Orders', 'c-purple', () => nav('orders')], ['heart', 'My Favourites', 'c-magenta', () => nav('favourites')], ['pin', 'My Addresses', 'c-red', () => nav('addresses')], ['user', 'Personal Details', 'c-indigo', () => user ? setSheet(true) : setAuthOpen(true)], ['bell', 'Notifications', 'c-pink', () => nav('notifications')],
+      ['help', 'Help Center', 'c-orange', () => nav('page', { page: 'help' })], ['info', 'About Us', 'c-teal', () => nav('page', { page: 'about' })], ['shield', 'Privacy Policy', 'c-blue', () => nav('page', { page: 'privacy' })], ['file', 'Terms & Conditions', 'c-gray', () => nav('page', { page: 'terms' })],
+      ...(!done ? [['down', 'Install ByDoor app', 'c-green', install]] : []), ...(user ? [['logout', 'Logout', 'c-out', logout]] : [])];
+    page = (<>
+      <div className="phead"><h2>Profile</h2></div>
+      <div className="pcard"><div className="av">{user ? '😊' : '＋'}</div><div><h3>Hello, {user ? pname : 'Guest'} 👋</h3><p>{user ? (profile?.firstName ? user : 'You are signed in.') : 'Sign in to save your details and order faster.'}</p></div>
+        {!user && <button className="btn big" onClick={() => setAuthOpen(true)}>Sign In / Register</button>}</div>
+      {incomplete && <button className="pbanner" onClick={() => setSheet(true)}><span className="bi"><Ico n="user" /></span><span className="bt"><b>Complete your profile</b><small>Add your First name, Last name, Address and Email so orders reach you.</small><i className="bar"><u style={{ width: have * 25 + '%' }} /></i></span><em>›</em></button>}
+      <div className="pstats">{[['Orders', jget('bd_orders', []).length], ['Favorites', favs.length], ['Addresses', profile?.street ? 1 : 0]].map(([l, n]) => <div key={l}><small>{l}</small><b>{n}</b></div>)}</div>
+      <div className="pmenu">{rows.map(([ic, t, c, fn]) => <button key={t} className={c} onClick={fn}><span className="ic"><Ico n={ic} /></span><b>{t}</b><i>›</i></button>)}</div></>); }
 
   return (<div className="app">
-    {show && <Welcome needAuth={!localStorage.getItem('bd_user') && !localStorage.getItem('bd_skip')} onDone={() => { setShow(false); setUser(localStorage.getItem('bd_user')); }} />}
-    {authOpen && <Welcome startAuth needAuth onDone={() => { setAuthOpen(false); setUser(localStorage.getItem('bd_user')); }} />}
+    {show && <Welcome needAuth={!localStorage.getItem('bd_user') && !localStorage.getItem('bd_skip')} onDone={welcomeDone} />}
+    {authOpen && <Welcome startAuth needAuth onDone={welcomeDone} />}
     <header className="top"><button className="brand" aria-label="Home" onClick={() => nav('home')}><Logo small /></button>
       <nav className="dnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}>{n}{k === 'cart' && count ? ` (${count})` : ''}</button>)}</nav>
       <div className="acts">{!done && <button className="instbtn" onClick={install}>⬇ <span>Install app</span></button>}</div></header>
     <main className="main" key={view.v + (view.c || '') + (view.page || '')}>{page}</main>
     <nav className="bnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}><i>{e}</i><span>{n}</span>{k === 'cart' && count > 0 && <u className="badge">{count}</u>}</button>)}</nav>
     {help && <div className="drawer center"><div className="dbg" onClick={() => setHelp(false)} /><aside className="sheet"><h3>Install ByDoor app</h3><p><b>iPhone (Safari):</b> tap the Share button, then “Add to Home Screen”.</p><p><b>Android (Chrome):</b> tap the ⋮ menu, then “Install app” or “Add to Home screen”.</p><button className="btn" onClick={() => setHelp(false)}>Got it</button></aside></div>}
+    {sheet && <ProfileSheet profile={profile} onClose={() => setSheet(false)} onSaved={p => { setProfile(p); setSheet(false); setToast('Profile saved'); setTimeout(() => setToast(''), 1400); }} />}
     {toast && <div className="toast">{toast}</div>}
   </div>);
 }

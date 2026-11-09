@@ -12,7 +12,7 @@ function ImageInput({ value, onChange, max = 800 }) {
   return (<div className="imgin">{value && <img src={value} alt="" />}<input type="file" accept="image/*" onChange={pick} />
     <input placeholder="…or paste an image link" value={value && !value.startsWith('data:') ? value : ''} onChange={e => onChange(e.target.value)} />{value && <button type="button" onClick={() => onChange('')}>Remove image</button>}</div>);
 }
-const SET = [['area', 'Delivering to (area)'], ['deliveryTitle', 'Delivery headline (e.g. Delivery: Today)'], ['deliverySub', 'Delivery sub-text'], ['phone1', 'Phone / WhatsApp 1'], ['phone2', 'Phone 2'], ['hours', 'Opening hours'], ['helpText', 'Help Center text', 'area'], ['aboutUs', 'About Us text', 'area'], ['privacy', 'Privacy Policy text', 'area']];
+const SET = [['area', 'Delivering to (area)'], ['deliveryTitle', 'Delivery headline (e.g. Delivery: Today)'], ['deliverySub', 'Delivery sub-text'], ['phone1', 'Phone / WhatsApp 1'], ['phone2', 'Phone 2'], ['hours', 'Opening hours'], ['helpText', 'Help Center text', 'area'], ['aboutUs', 'About Us text', 'area'], ['privacy', 'Privacy Policy text', 'area'], ['terms', 'Terms & Conditions text', 'area']];
 function Settings() {
   const [f, setF] = useState(null), [m, setM] = useState(''); useEffect(() => { api('settings').then(setF); }, []);
   const save = async e => { e.preventDefault(); try { setF(await api('settings', 'PUT', f)); setM('Saved. The app shows the new settings now.'); } catch (x) { setM(x.message); } };

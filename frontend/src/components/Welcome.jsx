@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'; import { api } from '../utils/api.j
 const ROWS = [['🍚','🥛','🧈','🍞','☕','🧂','🍅','🥚'], ['🥩','🍗','🥬','🍎','🍋','🧅','🥔','🥕'], ['🥤','🧃','🍫','🍪','🍕','🍔','🧴','🧼']];
 export default function Welcome({ needAuth, onDone, startAuth }) {
   const [stage, setStage] = useState(startAuth ? 'auth' : 'splash'), [mode, setMode] = useState('signup'), [phone, setPhone] = useState(''), [err, setErr] = useState(''), [busy, setBusy] = useState(false), [out, setOut] = useState(false);
-  const finish = () => { sessionStorage.setItem('bd_splash', '1'); setOut(true); setTimeout(onDone, 450); };
+  const finish = fresh => { sessionStorage.setItem('bd_splash', '1'); setOut(true); setTimeout(() => onDone(fresh === true), 450); };
   useEffect(() => { if (startAuth) return; const t = setTimeout(() => (needAuth ? setStage('auth') : finish()), 2300); return () => clearTimeout(t); }, []);
   const skip = () => { localStorage.setItem('bd_skip', '1'); finish(); };
   const submit = async e => {
     e.preventDefault(); setBusy(true); setErr('');
-    try { const d = await api(`customers/${mode}`, 'POST', { phone }); localStorage.setItem('bd_user', d.phone); finish(); }
+    try { const d = await api(`customers/${mode}`, 'POST', { phone }); localStorage.setItem('bd_user', d.phone); if (d.token) localStorage.setItem('bd_ctoken', d.token); finish(mode === 'signup'); }
     catch (x) { setErr(x.message); } setBusy(false);
   };
   return (<div className={'welcome' + (out ? ' out' : '')}>
