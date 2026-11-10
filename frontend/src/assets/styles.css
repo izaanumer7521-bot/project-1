@@ -194,3 +194,33 @@ input[type=checkbox]{width:auto!important;margin-left:10px!important;transform:s
 .payacct{background:#fff8ec;border:1.5px dashed #f0b45a;border-radius:14px;padding:12px;margin-top:10px}.payacct p{margin:0 0 8px;font-size:.92rem}.acrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #f3dfbd}.acrow:first-of-type{border-top:0}.acrow small{display:block;color:#6b5a3a}.acrow b{word-break:break-all}.acrow button{border:1px solid #e0b36a;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;white-space:nowrap}
 .pushcard{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border-left:5px solid var(--or)}.pushcard.on{border-left-color:var(--g)}.pushcard small{display:block;color:#5b6f62;margin-top:3px;max-width:560px}.prow{display:flex;gap:8px;flex-wrap:wrap}.pushcard .err{flex-basis:100%;margin:0}
 .okmsg{color:#0b6b2e;font-weight:600}.adm aside b{color:#fff;padding:0 4px}
+
+/* ===== Admin + vendor theme layer: dark / light mode, readable buttons, 2-up stats on phones ===== */
+.adm,.loginpage{--bgc:#f6faf3;--panel:#fff;--panel2:#f6faf3;--txt:#10241a;--mut:#5b6f62;--line:#cfe8c6;--inp:#fff;--btnbg:#fff;--btntxt:#10241a;--danger:#b3261e;--dangerline:#e0b4b0;--head:#0b3d1f;--num:#0b3d1f;--num-o:#c25e00;--accent:#0b6b2e;--side:#0b3d1f;--barbg:#eef3ec;--shadow:0 2px 12px #0b6b2e14;color-scheme:light}
+.adm[data-theme=dark],.loginpage[data-theme=dark]{--bgc:#0b1220;--panel:#121c2e;--panel2:#0f1828;--txt:#e8eef7;--mut:#93a4bb;--line:#26354f;--inp:#16233a;--btnbg:#1b2a44;--btntxt:#e8eef7;--danger:#ff8a80;--dangerline:#5c2b30;--head:#2ed47a;--num:#e8eef7;--num-o:#ffb366;--accent:#4ade80;--side:#080d18;--barbg:#1b2a44;--shadow:0 2px 14px #0006;color-scheme:dark}
+.adm{background:var(--bgc);color:var(--txt)}.adm aside{background:var(--side)}.adm main h2{color:var(--head)}
+.adm .card,.adm .li,.adm .stat{background:var(--panel);color:var(--txt);box-shadow:var(--shadow)}
+.adm .stat:not(.g):not(.o){border-top-color:var(--line)}
+.adm small,.adm .li small,.adm .stat small,.adm .stat em,.adm .when,.adm .legend,.adm .axis,.adm .row2 small,.adm .logrow small,.adm .muted2,.adm .pushcard small{color:var(--mut)}
+.adm .stat b{color:var(--num)}.adm .stat.o b{color:var(--num-o)}
+.adm .row2{border-bottom-color:var(--line)}.adm .sub{border-top-color:var(--line)}.adm .bar .col{background:var(--barbg)}
+.adm .maplink,.adm .chg u,.adm .okmsg{color:var(--accent)}.adm .chg s,.adm .err{color:var(--danger)}
+.adm input,.adm select,.adm textarea{background:var(--inp);color:var(--txt);border-color:var(--line)}
+.adm ::placeholder,.loginpage ::placeholder{color:var(--mut);opacity:.85}
+.adm .oedit,.adm .acct{background:var(--panel2);border-color:var(--line)}
+/* Edit / Delete / small action buttons: always readable in both themes */
+.adm .li button,.adm .card>button:not(.btn),.adm .imgin button,.adm .pager button,.adm .rangebar button,.adm .acrow button,.adm .btn.ghost{background:var(--btnbg);color:var(--btntxt);border:1px solid var(--line);font-weight:600}
+.adm .li button,.adm .card>button:not(.btn){padding:7px 14px;border-radius:10px}
+.adm .li button:hover,.adm .card>button:not(.btn):hover,.adm .imgin button:hover,.adm .pager button:hover,.adm .rangebar button:hover{border-color:var(--accent)}
+.adm .li>div:last-child button:last-child,.adm .card>button:not(.btn):last-of-type,.adm .acct button{color:var(--danger);border-color:var(--dangerline)}
+.adm .rangebar button.on{background:var(--g);color:#fff;border-color:var(--g)}
+.adm .btn:not(.ghost){background:var(--g);color:#fff;border:0}.adm .btn:not(.ghost):hover{background:var(--gd)}
+.adm .mini{color:var(--accent);border-color:var(--accent);background:none}
+.adm[data-theme=dark] .pill{background:#22324d;color:#cfe0f5}.adm[data-theme=dark] .pill.ok{background:#12402b;color:#6ee7a8}.adm[data-theme=dark] .pill.warn{background:#4a3412;color:#ffc46b}
+/* Theme switch button (sidebar + login page) */
+.adm aside .themebtn{border:1px solid #ffffff55;text-align:center;margin-top:6px}.adm aside .themebtn:hover{background:var(--g)}
+.loginpage{position:relative}.loginpage[data-theme=dark]{background:linear-gradient(135deg,#070c16,#0e1a2e 60%,#0b3d1f)}
+.loginpage .login{background:var(--panel);color:var(--txt)}.loginpage .login input{background:var(--inp);color:var(--txt);border-color:var(--line)}.loginpage .login .err{color:var(--danger)}
+.themebtn.floating{position:absolute;top:16px;right:16px;background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;font-weight:600}
+/* Phones: dashboard number cards sit side by side (2 per row) */
+@media(max-width:820px){.adm main{padding:16px}.adm .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.adm .stat{padding:12px 12px;min-width:0}.adm .stat small{font-size:.78rem}.adm .stat b{font-size:1.2rem;word-break:break-word}.adm .stat em{font-size:.72rem}}

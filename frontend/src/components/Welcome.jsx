@@ -14,13 +14,14 @@ export default function Welcome({ needAuth, onDone, startAuth }) {
     {stage === 'splash' ? <div className="splash"><span className="ring" /><img src="/logo.png" alt="ByDoor EXPRESS" /><p>Har Zaroorat, Ab Aapke Ghar Tak!</p><i className="loadbar" /></div> :
     <div className="authwrap">
       <button className="skip" onClick={skip}>Skip ›</button>
-            <form className="authcard" onSubmit={submit}>
+      <div className="marquee">{ROWS.map((r, i) => <div key={i} className={'mrow r' + i}>{[...r, ...r].map((e, j) => <span key={j}>{e}</span>)}</div>)}</div>
+      <form className="authcard" onSubmit={submit}>
         <img src="/logo.png" alt="ByDoor EXPRESS" /><p className="tag">EVERYTHING AT YOUR DOORSTEP</p>
         <div className="divider"><span>{mode === 'signup' ? 'SIGN UP' : 'LOG IN'}</span></div>
         <div className="phone"><b>🇵🇰 +92</b><input inputMode="numeric" autoComplete="tel" placeholder="Enter your Mobile Number" value={phone} onChange={e => setPhone(e.target.value.replace(/[^\d]/g, '').slice(0, 11))} /></div>
         {err && <p className="err">{err}</p>}
         <button className="btn big" disabled={busy || phone.replace(/^0/, '').length < 10}>{busy ? 'Please wait…' : mode === 'signup' ? 'Sign Up' : 'Log In'}</button>
-        <p className="swlink">{mode === 'signup' ? 'Already have an account?' : "Don't have an account?"} <a onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setErr(''); }}>{mode === 'signup' ? 'Log In here' : 'Sign Up here'}</a></p>
+        <p className="switch">{mode === 'signup' ? 'Already have an account?' : "Don't have an account?"} <a onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setErr(''); }}>{mode === 'signup' ? 'Log In here' : 'Sign Up here'}</a></p>
       </form></div>}
   </div>);
 }
