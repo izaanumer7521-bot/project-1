@@ -2,7 +2,7 @@
 //  - shopId always comes from the verified login, never from the request body
 //  - every read/update/delete filters by { _id, shopId }, so another shop's product can never be touched
 import { Router } from 'express'; import bcrypt from 'bcryptjs'; import mongoose from 'mongoose';
-import { Admin, Product, Category } from '../models/index.js'; import { vendorOnly, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
+import { Admin, Product, Category, Order } from '../models/index.js'; import { vendorOnly, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
 const r = Router(); r.use(vendorOnly);
 const bad = (s, m, c = 400) => s.status(c).json({ error: m });
 // Vendors can only send these fields. shopId, bestSeller and hotDeal are never accepted from a vendor.
@@ -17,6 +17,12 @@ function clean(b, full) {
   return u;
 }
 const mine = q => ({ shopId: q.vendor.shopId });
+// Orders that contain this shop's products. A vendor only ever sees ITS OWN lines and the amount for them:
+// no other shop's items, no order total, no delivery charges, and no customer phone or address.
+r.get('/orders', wrap(async (q, s) => {
+  const id = q.vendor.shopId, rows = await Order.find({ 'items.shopId': id }).sort({ createdAt: -1 }).limit(200);
+  s.json(rows.map(o => { const items = (o.items || []).filter(i => i.shopId === id).map(i => ({ name: i.name, price: i.price, qty: i.qty })); return { _id: o._id, code: String(o._id).slice(-5).toUpperCase(), createdAt: o.createdAt, status: o.status || 'New', customer: o.name, items, subtotal: items.reduce((x, i) => x + i.price * i.qty, 0) }; }));
+}));
 r.get('/products', wrap(async (q, s) => s.json(await Product.find(mine(q)).sort({ createdAt: -1 }))));
 r.post('/products', wrap(async (q, s) => {
   const u = clean(q.body, true); if (u.error) return bad(s, u.error);

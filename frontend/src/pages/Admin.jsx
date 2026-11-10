@@ -154,6 +154,17 @@ function Shops() {
       <div><button onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, phone: r.phone, email: r.email, password: '', active: r.active }); }}>Edit</button>
         <button onClick={async () => { if (confirm(`Delete "${r.name}" and its login? Its products stay but are set out of stock.`)) { await api('shops/' + r._id, 'DELETE'); load(); } }}>Delete</button></div></div>)}{!rows.length && <p>No vendors yet. Add your first shop.</p>}</div></div>);
 }
+function VendorOrders() {
+  const [rows, setRows] = useState(null), [err, setErr] = useState(''), load = () => api('vendor/orders').then(d => { setRows(d); setErr(''); }).catch(x => setErr(x.message));
+  useEffect(() => { load(); const id = setInterval(load, 30000); return () => clearInterval(id); }, []);
+  const col = { New: 'warn', Confirmed: '', 'On the way': '', Delivered: 'ok', Cancelled: '' };
+  return (<div><div className="row" style={{ marginBottom: 10 }}><button className="btn ghost" onClick={load}>Refresh</button><small className="muted2">Updates by itself every 30 seconds</small></div>
+    {err && <p className="err">{err}</p>}{!rows && !err && <p>Loading…</p>}
+    <div className="list">{rows && rows.map(o => <div key={o._id} className="card"><div className="row2"><b>Order #{o.code}</b><span className={'pill ' + (col[o.status] || '')}>{o.status}</span></div><small className="when">{dt(o.createdAt)} · Customer: {o.customer}</small>
+      <div style={{ marginTop: 8 }}>{o.items.map((i, k) => <div key={k} className="row2"><span>{i.name} <small>× {i.qty} @ {rs(i.price)}</small></span><b>{rs(i.price * i.qty)}</b></div>)}</div>
+      <div className="row2" style={{ borderBottom: 0 }}><b>Your items total</b><b>{rs(o.subtotal)}</b></div></div>)}
+      {rows && !rows.length && <p>No orders for your products yet. You will get a phone alert when one comes in.</p>}</div></div>);
+}
 function VendorAccount() {
   const [f, setF] = useState({ currentPassword: '', newPassword: '' }), [m, setM] = useState('');
   const save = async e => { e.preventDefault(); try { await api('vendor/account', 'PUT', f); setM('Password changed.'); setF({ currentPassword: '', newPassword: '' }); } catch (x) { setM(x.message); } };
@@ -163,7 +174,7 @@ function VendorAccount() {
     {m && <p className="err">{m}</p>}<button className="btn">Save</button></form>);
 }
 const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
-const VENDOR_TABS = [['vproducts', 'My products'], ['vaccount', 'Account']];
+const VENDOR_TABS = [['vorders', 'Orders'], ['vproducts', 'My products'], ['vaccount', 'Account']];
 export default function Admin() {
   const [email, setEmail] = useState(null), [role, setRole] = useState('admin'), [shopName, setShopName] = useState(''), [tab, setTab] = useState('dashboard'), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
   const who = d => { setEmail(d.email); setRole(d.role || 'admin'); setShopName(d.shopName || ''); };
@@ -175,9 +186,9 @@ export default function Admin() {
     <input type="password" required placeholder="Password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} />
     {err && <p className="err">{err}</p>}<button className="btn">Sign in</button></form></div>);
   // VENDOR: the ONLY things rendered are their own products and password. No admin component is even created for them (and the server refuses them anyway).
-  if (role === 'vendor') { const t = tab === 'vaccount' ? 'vaccount' : 'vproducts';
+  if (role === 'vendor') { const t = tab === 'vaccount' || tab === 'vproducts' ? tab : 'vorders';
     return (<div className="adm"><aside><Logo small /><b>{shopName}</b><small>{email}</small>{VENDOR_TABS.map(([k, n]) => <button key={k} className={t === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}<button onClick={logout}>Log out</button></aside>
-      <main><h2>{t === 'vaccount' ? 'Account' : 'My products'}</h2>{t === 'vaccount' ? <VendorAccount /> : <><PushSetup /><Crud key="vp" path="vproducts" schema="vendorProducts" base="vendor/products" /></>}</main></div>); }
+      <main><h2>{t === 'vaccount' ? 'Account' : t === 'vproducts' ? 'My products' : 'Orders'}</h2>{t === 'vaccount' ? <VendorAccount /> : t === 'vproducts' ? <Crud key="vp" path="vproducts" schema="vendorProducts" base="vendor/products" /> : <><PushSetup /><VendorOrders /></>}</main></div>); }
   return (<div className="adm"><aside><Logo small /><small>{email}</small>
     {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
     <button onClick={logout}>Log out</button></aside>
