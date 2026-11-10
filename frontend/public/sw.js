@@ -1,10 +1,10 @@
-const C = 'bydoor-v2';
+const C = 'bydoor-v3';
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(['/', '/logo.png']))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.pathname.startsWith('/api')) return;
-  e.respondWith(fetch(e.request).then(r => { const cp = r.clone(); caches.open(C).then(c => c.put(e.request, cp)); return r; })
+  e.respondWith(fetch(e.request).then(r => { const t = r.headers.get('content-type') || ''; if (r.ok && !(/\.(webp|png|jpe?g|svg|js|css)$/.test(u.pathname) && t.includes('text/html'))) { const cp = r.clone(); caches.open(C).then(c => c.put(e.request, cp)); } return r; })
     .catch(() => caches.match(e.request).then(m => m || caches.match('/'))));
 });
 

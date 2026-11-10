@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'; import { api } from '../uti
 // Intro slides: same artwork, framed on a different part of it for every slide
 const SLIDES = [
   { h: ['Everything you need,', 'delivered.'], p: 'Fast, reliable delivery for food, groceries, medicine, and parcels right to your door.', z: 1, o: '50% 50%' },
-  { h: ['Shop from your', 'local vendors.'], p: 'Order from trusted shops in your city, all inside one app.', z: 1.9, o: '14% 38%' },
-  { h: ['Order your way,', 'even on WhatsApp.'], p: 'Just type what you need and we bring it to your doorstep.', z: 1.9, o: '90% 68%' },
+  { h: ['Shop from your', 'local stores.'], p: 'Order from trusted stores in your city, all inside one app.', z: 1.9, o: '14% 38%' },
+  { h: ['Order your way,', 'right to your door.'], p: 'Pick a store, choose what you like and we bring it to your doorstep.', z: 1.9, o: '90% 68%' },
 ];
 export default function Welcome({ needAuth, onDone, startAuth }) {
   const [stage, setStage] = useState(startAuth ? 'auth' : 'splash'), [slide, setSlide] = useState(0), [mode, setMode] = useState('signup'), [phone, setPhone] = useState(''), [err, setErr] = useState(''), [busy, setBusy] = useState(false), [out, setOut] = useState(false), x0 = useRef(null);

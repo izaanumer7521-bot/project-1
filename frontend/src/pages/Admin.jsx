@@ -140,18 +140,19 @@ function Account({ email, setEmail }) {
     {m && <p className="err">{m}</p>}<button className="btn">Save changes</button></form>);
 }
 function Shops() {
-  const blank = { name: '', phone: '', email: '', password: '', active: true }, [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [ok, setOk] = useState('');
+  const blank = { name: '', image: '', phone: '', email: '', password: '', active: true }, [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [ok, setOk] = useState('');
   const load = () => api('shops').then(setRows).catch(x => setErr(x.message)); useEffect(() => { load(); }, []);
   const save = async e => { e.preventDefault(); setErr(''); setOk(''); try { f._id ? await api('shops/' + f._id, 'PUT', f) : await api('shops', 'POST', f); setOk(f._id ? 'Saved.' : 'Vendor created. Give them the email and password: they sign in at the same /bd-admin page and only see their own products.'); setF(blank); load(); } catch (x) { setErr(x.message); } };
   return (<div className="two"><form className="card" onSubmit={save}><h3>{f._id ? 'Edit vendor' : 'Add vendor shop'}</h3>
     <label>Shop name<input required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></label>
+    <label>Store picture / logo (shown on the home page instead of the first letter)<ImageInput value={f.image} max={500} onChange={v => setF({ ...f, image: v })} /></label>
     <label>Shop phone (optional)<input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></label>
     <label>Vendor login email<input type="email" required value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></label>
     <label>{f._id ? 'New password (leave empty to keep)' : 'Password (8+ characters)'}<input autoComplete="off" required={!f._id} minLength={f._id && !f.password ? 0 : 8} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></label>
     {f._id && <label>Shop is active (untick to block login and alerts)<input type="checkbox" checked={!!f.active} onChange={e => setF({ ...f, active: e.target.checked })} /></label>}
     {err && <p className="err">{err}</p>}{ok && <p className="okmsg">{ok}</p>}<button className="btn">{f._id ? 'Save' : 'Create vendor'}</button>{f._id && <button type="button" className="btn ghost" onClick={() => setF(blank)}>Cancel</button>}</form>
-    <div className="list">{rows.map(r => <div key={r._id} className="li"><div><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.active ? '🟢 Active' : '🔴 Disabled'}</small></div>
-      <div><button className="ebtn" onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, phone: r.phone, email: r.email, password: '', active: r.active }); }}>Edit</button>
+    <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : <em>🏪</em>}<span><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.active ? '🟢 Active' : '🔴 Disabled'}</small></span></div>
+      <div><button className="ebtn" onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, image: r.image || '', phone: r.phone, email: r.email, password: '', active: r.active }); }}>Edit</button>
         <button className="dbtn" onClick={async () => { if (confirm(`Delete "${r.name}" and its login? Its products stay but are set out of stock.`)) { await api('shops/' + r._id, 'DELETE'); load(); } }}>Delete</button></div></div>)}{!rows.length && <p>No vendors yet. Add your first shop.</p>}</div></div>);
 }
 function VendorOrders() {
@@ -183,7 +184,7 @@ export default function Admin() {
   useEffect(() => { localStorage.getItem('bd_token') && api('admin/me').then(who).catch(() => localStorage.removeItem('bd_token')); }, []);
   const login = async e => { e.preventDefault(); try { const d = await api('admin/login', 'POST', f); localStorage.setItem('bd_token', d.token); who(d); setErr(''); } catch (x) { setErr(x.message); } };
   const logout = () => { localStorage.removeItem('bd_token'); setEmail(null); setRole('admin'); setTab('dashboard'); };
-  if (!email) return (<div className="loginpage"><ThemeToggle float /><form className="login" onSubmit={login}><Logo /><h2>Sign in</h2>
+  if (!email) return (<div className="loginpage"><ThemeToggle float /><form className="login" onSubmit={login}><Logo /><div className="authart signup" /><h2>Sign in</h2>
     <input type="email" required placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} />
     <input type="password" required placeholder="Password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} />
     {err && <p className="err">{err}</p>}<button className="btn">Sign in</button></form></div>);

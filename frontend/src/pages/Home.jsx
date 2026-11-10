@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, CATS, PHONES, waLink } from '../utils/api.js'; import { WhatsAppFab, WaOrderBox, WaIcon } from '../components/WhatsApp.jsx';
+import { api, CATS, PHONES, waLink } from '../utils/api.js'; import { WaIcon } from '../components/WhatsApp.jsx';
 import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import BannerSlider from '../components/BannerSlider.jsx'; import CurveCats from '../components/CurveCats.jsx';
 
 const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100, codEnabled: true, codNote: '', advanceEnabled: false, advanceNote: '', paymentAccounts: [] };
@@ -63,50 +63,48 @@ export default function Home() {
     return (<article className={'pc' + (deal ? ' deal' : '')} key={p._id}><div className="pci"><Thumb item={{ ...p, emoji: emojiOf(p.category) }} />{pct > 0 && <span className="off">⚡ {pct}% OFF</span>}<button className={'heart' + (favs.includes(p._id) ? ' on' : '')} aria-label="Favourite" onClick={() => toggleFav(p)}>{favs.includes(p._id) ? '♥' : '♡'}</button>
       {!deal && (n ? <div className="mini">{qty(p)}</div> : <button className="plus" aria-label={'Add ' + p.name} onClick={() => add(p)}>+</button>)}</div>
       <h4>{p.name}</h4>{shopOf(p.shopId) && <i className="stag">🏪 {shopOf(p.shopId).name}</i>}<small>{p.description}</small>
-      <div className="pr"><b>{rs(p.price)}</b>{p.oldPrice > p.price && <s>{rs(p.oldPrice)}</s>}<em>{p.unit}</em><a className="pwa" aria-label={'Order ' + p.name + ' on WhatsApp'} href={waLink(S.phone1, `Hello ByDoor! I want to order: ${p.name}${shopOf(p.shopId) ? ' (Shop: ' + shopOf(p.shopId).name + ')' : ''} - ${rs(p.price)}`)} target="_blank" rel="noopener noreferrer"><WaIcon size={16} /></a></div>
+      <div className="pr"><b>{rs(p.price)}</b>{p.oldPrice > p.price && <s>{rs(p.oldPrice)}</s>}<em>{p.unit}</em></div>
       {deal && (n ? <div className="dq">{qty(p)}</div> : <button className="btn sm" onClick={() => add(p)}>Add to cart →</button>)}</article>); };
   const section = (title, action, onAction, body, cls = '') => <section className={cls}><div className="sh"><h3>{title}</h3>{action && <button onClick={onAction}>{action}</button>}</div>{body}</section>;
   const avail = products.filter(p => p.available !== false);
   const shopOf = id => shops.find(x => String(x._id) === String(id)), PAL = ['#00c27a,#18b5d8', '#8b5cf6,#ff4f9a', '#ff8a3d,#ff4f9a', '#18b5d8,#8b5cf6', '#00c27a,#8bc34a', '#ff4f9a,#8b5cf6'];
-  const shopsWith = shops.map((x, i) => ({ ...x, pal: PAL[i % PAL.length], items: avail.filter(p => String(p.shopId) === String(x._id)) })), shopCard = x => <button key={x._id} className="shopc" onClick={() => nav('shop', { s: x._id })}><span className="shav" style={{ background: `linear-gradient(135deg,${x.pal})` }}>{(x.name || '?').trim().slice(0, 1).toUpperCase()}</span><b>{x.name}</b><small>{x.items.length} product{x.items.length === 1 ? '' : 's'}</small><em>Visit shop ›</em></button>;
-  const waCart = () => window.open(waLink(S.phone1, 'Hello ByDoor! I want to order:\n' + items.map(i => `• ${i.name} × ${i.qty} = ${rs(i.qty * i.price)}`).join('\n') + `\n\nSubtotal: ${rs(total)}\nDelivery: ${rs(fee)}\nTotal: ${rs(grand)}` + (f.name ? `\nName: ${f.name}` : '') + (f.address ? `\nAddress: ${f.address}` : '')), '_blank', 'noopener');
+  const shopsWith = shops.map((x, i) => ({ ...x, pal: PAL[i % PAL.length], items: avail.filter(p => String(p.shopId) === String(x._id)) }));
+  const av = (x, cls = '') => <span className={'shav ' + cls} style={{ background: `linear-gradient(135deg,${x.pal})` }}>{x.image ? <img src={x.image} alt={x.name} loading="lazy" /> : (x.name || '?').trim().slice(0, 1).toUpperCase()}</span>;
+  const shopCard = x => <button key={x._id} className="shopc" onClick={() => nav('shop', { s: x._id })}>{av(x, 'xl')}<b>{x.name}</b><small>{x.items.length} item{x.items.length === 1 ? '' : 's'} · {[...new Set(x.items.map(p => emojiOf(p.category)).filter(Boolean))].slice(0, 4).join(' ')}</small><em>Open menu ›</em></button>;
   const best = avail.filter(p => p.bestSeller).length ? avail.filter(p => p.bestSeller) : avail.slice(0, 8), hot = avail.filter(p => p.hotDeal);
   const catCard = (c, cls) => <button key={c.key} className={cls} onClick={() => nav('catalog', { c: c.key })}><Thumb item={c} /><b>{c.name}</b><i>›</i></button>;
   const back = t => <div className="ptitle"><button className="back" aria-label="Back" onClick={() => history.back()}>‹</button><h2>{t}</h2></div>;
   const needle = q.trim().toLowerCase(), found = needle ? avail.filter(p => (p.name + ' ' + (p.description || '') + ' ' + (list.find(c => c.key === p.category)?.name || '')).toLowerCase().includes(needle)) : [];
 
   const selCat = sel === 'all' ? null : list.find(c => c.key === sel), arcItems = [{ key: 'all', name: 'All', emoji: '✨' }, ...list.map(c => ({ key: c.key, name: c.name, emoji: c.emoji, image: c.image }))];
-  let ours = avail.filter(p => sel === 'all' || p.category === sel);
-  if (sort === 'deal') ours = ours.filter(p => p.oldPrice > p.price); else if (sort === 'low') ours = [...ours].sort((a, b) => a.price - b.price); else if (sort === 'high') ours = [...ours].sort((a, b) => b.price - a.price); else ours = [...ours].sort((a, b) => (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0));
+  const inCat = (x, k) => k === 'all' || x.items.some(p => p.category === k), homeStores = shopsWith.filter(x => inCat(x, sel));
+  const foundStores = needle ? shopsWith.filter(x => (x.name + ' ' + x.items.map(p => p.name).join(' ')).toLowerCase().includes(needle)) : [];
+  let ours = avail;
 
   let page;
   if (view.v === 'home') page = (<>
     <div className="hhead"><div className="loc"><span className="locic"><Ico n="pin" s={20} /></span><span><small>Delivery location</small><b>{S.area}</b></span></div>
       <div className="hbtns"><button className="ib" aria-label="Cart" onClick={() => nav('cart')}><Ico n="cart" s={21} />{count > 0 && <u className="badge2">{count}</u>}</button><button className="ib" aria-label="Notifications" onClick={() => nav('notifications')}><Ico n="bell" s={21} /></button></div></div>
     <h1 className="greet"><small>{user ? 'Welcome back 👋' : 'Assalam o Alaikum 👋'}</small>Everything you need, <em>delivered.</em></h1>
-    <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search menu, shops…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div><button type="button" className={'fbtn' + (fopen || sort !== 'pop' ? ' on' : '')} aria-label="Filter" onClick={() => setFopen(!fopen)}><Ico n="filter" s={20} /></button></div>
-    {fopen && <div className="chips">{[['pop', 'Popular'], ['low', 'Price: low → high'], ['high', 'Price: high → low'], ['deal', '⚡ Deals only']].map(([k, n]) => <button key={k} className={sort === k ? 'on' : ''} onClick={() => setSort(k)}>{n}</button>)}</div>}
+    <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search stores…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div></div>
     <CurveCats items={arcItems} selected={sel} onSelect={k => setSel(k)} />
-    {needle ? section(`Results for “${q}”`, '', null, found.length ? <div className="pgrid">{found.map(p => pcard(p))}</div> : <><p className="muted">Nothing found. Just type it below and we will bring it.</p><WaOrderBox phone={S.phone1} /></>) : <>
+    {needle ? section(`Stores for “${q}”`, '', null, foundStores.length ? <div className="storegrid">{foundStores.map(shopCard)}</div> : <p className="muted">No store found. Try another name.</p>) : <>
       <BannerSlider banners={banners} onCta={() => nav('categories')} />
-      {section(selCat ? selCat.name : 'Our Items', 'View All', () => (selCat ? nav('catalog', { c: selCat.key }) : nav('categories')), ours.length ? <div className="pgrid">{ours.slice(0, 12).map(p => pcard(p))}</div> : <p className="muted">Nothing here yet. Type it below and we will bring it to you.</p>, 'ouritems')}
-      <div id="wa-order"><WaOrderBox phone={S.phone1} /></div>
-      {!!shopsWith.length && <section id="shops">{<div className="sh"><h3>🏪 Our Vendor Shops</h3><span className="cnt">{shopsWith.length}</span></div>}<p className="sub">Tap a shop to see everything it sells</p><div className="hscroll">{shopsWith.map(shopCard)}</div></section>}
-      {shopsWith.filter(x => x.items.length).slice(0, 4).map(x => <section key={x._id} className="shopsec"><div className="sh"><h3><span className="shav sm" style={{ background: `linear-gradient(135deg,${x.pal})` }}>{x.name.trim().slice(0, 1).toUpperCase()}</span>{x.name}</h3><button onClick={() => nav('shop', { s: x._id })}>View shop</button></div><div className="hscroll">{x.items.slice(0, 8).map(p => pcard(p))}</div></section>)}
-      {section('Best Selling', 'View All', () => nav('categories'), <div className="hscroll">{best.map(p => pcard(p))}</div>)}
-      {!!hot.length && <section className="hot"><div className="sh"><h3>🔥 Hot Deals</h3><span className="cnt">{hot.length}</span></div><p className="sub">Offers that cost less than usual</p><div className="hscroll">{hot.map(p => pcard(p, true))}</div></section>}
-      <div className="trust"><div><b>🛵</b><span>Fast delivery</span></div><div><b>🏪</b><span>Local shops</span></div><div><b>💬</b><span>Order by WhatsApp</span></div></div>
+      {!!shopsWith.length ? <section id="shops"><div className="sh"><h3>🏪 {selCat ? selCat.name + ' Stores' : 'Stores'}</h3><span className="cnt">{homeStores.length}</span></div><p className="sub">Tap a store to see its menu</p>
+        {homeStores.length ? <div className="storegrid">{homeStores.map(shopCard)}</div> : <p className="muted">No stores in this category yet.</p>}</section> : <p className="muted">Stores will appear here soon.</p>}
+      <div className="trust"><div><b>🛵</b><span>Fast delivery</span></div><div><b>🏪</b><span>Local stores</span></div><div><b>🔒</b><span>Safe &amp; private</span></div></div>
       {!!reviews.length && section('What customers say', '', null, <div className="hscroll">{reviews.map(r => <blockquote key={r._id}><div className="stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div><p>{r.text}</p><cite>{r.name}</cite></blockquote>)}</div>)}
       <div className="contact"><b>Need help? Talk to us</b><a href={`tel:${S.phone1}`}>📞 {S.phone1}</a><a href={`tel:${S.phone2}`}>📞 {S.phone2}</a><a className="cwa" href={waLink(S.phone1, 'Hello ByDoor!')} target="_blank" rel="noopener noreferrer"><WaIcon size={18} /> Chat on WhatsApp</a><small>{S.hours} · {S.area}</small></div></>}
   </>);
-  else if (view.v === 'shop') { const x = shopsWith.find(y => String(y._id) === String(view.s));
-    page = (<>{back(x?.name || 'Shop')}{x ? <><div className="shophead"><span className="shav lg" style={{ background: `linear-gradient(135deg,${x.pal})` }}>{x.name.trim().slice(0, 1).toUpperCase()}</span><div><h3>{x.name}</h3><small>{x.items.length} product{x.items.length === 1 ? '' : 's'} · {S.area}</small></div></div>
-      <WaOrderBox phone={S.phone1} shop={x.name} compact title={'Order from ' + x.name} />
-      {x.items.length ? <div className="pgrid">{x.items.map(p => pcard(p))}</div> : <p className="muted">No products listed yet. Type what you need above and we will get it.</p>}</> : <p className="muted">Loading shop…</p>}</>); }
+  else if (view.v === 'shop') { const x = shopsWith.find(y => String(y._id) === String(view.s)), groups = x ? list.map(c => [c, x.items.filter(p => p.category === c.key)]).filter(g => g[1].length) : [], other = x ? x.items.filter(p => !list.some(c => c.key === p.category)) : [];
+    page = (<>{back(x?.name || 'Store')}{x ? <><div className="shophead">{av(x, 'lg')}<div><h3>{x.name}</h3><small>{x.items.length} item{x.items.length === 1 ? '' : 's'} · {S.area}</small></div></div>
+      {groups.map(([c, ps]) => <section key={c.key} className="menucat"><div className="sh"><h3>{c.emoji} {c.name}</h3><span className="cnt">{ps.length}</span></div><div className="pgrid">{ps.map(p => pcard(p))}</div></section>)}
+      {!!other.length && <div className="pgrid">{other.map(p => pcard(p))}</div>}
+      {!x.items.length && <p className="muted">This store has not added its menu yet.</p>}</> : <p className="muted">Loading store…</p>}</>); }
   else if (view.v === 'categories') { const ls = list.filter(c => c.name.toLowerCase().includes(cq.toLowerCase()));
-    page = (<>{back('All Categories')}<div className="search"><span>🔍</span><input placeholder="Search categories…" value={cq} onChange={e => setCq(e.target.value)} /></div><div className="cgrid">{ls.map(c => catCard(c, 'gcat'))}</div><WaOrderBox phone={S.phone1} compact /></>); }
-  else if (view.v === 'catalog') { const c = list.find(x => x.key === view.c), ps = avail.filter(p => p.category === view.c);
-    page = (<>{back(c?.name || 'Products')}{ps.length ? <div className="pgrid">{ps.map(p => pcard(p))}</div> : <p className="muted">No items here yet. Type it below and we will get it for you.</p>}<WaOrderBox phone={S.phone1} compact title={'Order ' + (c?.name || 'anything')} /></>); }
+    page = (<>{back('All Categories')}<div className="search"><span>🔍</span><input placeholder="Search categories…" value={cq} onChange={e => setCq(e.target.value)} /></div><div className="cgrid">{ls.map(c => catCard(c, 'gcat'))}</div></>); }
+  else if (view.v === 'catalog') { const c = list.find(x => x.key === view.c), st = shopsWith.filter(x => inCat(x, view.c));
+    page = (<>{back(c ? c.name + ' Stores' : 'Stores')}{st.length ? <div className="storegrid">{st.map(shopCard)}</div> : <p className="muted">No stores in this category yet.</p>}</>); }
   else if (view.v === 'cart') page = (<>{back('My Cart')}
     {placed ? <div className="receipt"><div className="rc-ok"><div>✅</div><h3>Order placed!</h3><p>Your order has been sent to us. We will call you shortly to confirm.</p></div>
       <div className="rc-card"><div className="rc-h"><b>Order #{placed._id.slice(-5).toUpperCase()}</b><small>{new Date(placed.createdAt).toLocaleString()}</small></div>
@@ -114,7 +112,7 @@ export default function Home() {
         <div className="rc-sec"><small>ORDER DETAILS</small>{placed.items.map((i, k) => <div className="rc-row" key={k}><span>{i.name} <em>× {i.qty}</em></span><b>{rs(i.price * i.qty)}</b></div>)}</div>
         <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div><div className="rc-row"><span>Payment</span><b>{placed.paymentMethod === 'advance' ? 'Advance (we will verify your payment)' : 'Cash on Delivery'}</b></div></div></div>
       <div className="row"><button className="btn" onClick={() => { setPlaced(null); nav('orders'); }}>Track my order</button><button className="btn ghost" onClick={() => { setPlaced(null); nav('home'); }}>Continue shopping</button></div></div> :
-    !items.length ? <><div className="empty"><div>🛒</div><p>Your cart is empty</p><button className="btn" onClick={() => nav('categories')}>Start shopping</button></div><WaOrderBox phone={S.phone1} compact /></> : <>
+    !items.length ? <><div className="empty"><div>🛒</div><p>Your cart is empty</p><button className="btn" onClick={() => nav('categories')}>Start shopping</button></div></> : <>
       <div className="cl">{items.map(i => <div key={i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}</div></div>)}</div>
       <form className="checkout" onSubmit={order}><div className="sumbox"><div><span>Subtotal</span><b>{rs(total)}</b></div><div><span>Delivery charges</span><b>{rs(fee)}</b></div><div className="grand"><span>Total</span><b>{rs(grand)}</b></div></div>
         <input required placeholder="Your name" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
@@ -129,12 +127,12 @@ export default function Home() {
             {accts.length > 1 && <select value={pay.account} onChange={e => setPay({ ...pay, account: e.target.value })}><option value="">Which account did you pay?</option>{accts.map((a, k) => <option key={k} value={a.provider}>{a.provider}</option>)}</select>}
             <input required placeholder="Transaction ID / reference number" value={pay.ref} onChange={e => setPay({ ...pay, ref: e.target.value })} /></div>}
         </div>
-        {msg && <p className="err">{msg}</p>}<button className="btn big" disabled={busy}>{busy ? 'Placing…' : 'Place order · ' + rs(grand)}</button><button type="button" className="wabtn" onClick={waCart}><WaIcon size={20} /> Order this cart on WhatsApp</button></form></>}</>);
+        {msg && <p className="err">{msg}</p>}<button className="btn big" disabled={busy}>{busy ? 'Placing…' : 'Place order · ' + rs(grand)}</button></form></>}</>);
   else if (view.v === 'orders') page = (<>{back('My Orders')}{orders === null ? <p className="muted">Loading…</p> : !orders.length ? <div className="empty"><div>🧾</div><p>No orders yet</p><button className="btn" onClick={() => nav('categories')}>Order now</button></div> :
     orders.map(o => <div key={o._id} className="ocard"><div className="oh"><b>Order #{o._id.slice(-5).toUpperCase()}</b><span className="chip2" data-s={o.status}>{o.status}</span></div><small>{new Date(o.createdAt).toLocaleString()}</small>
       <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')}</p><b>{rs(o.total)}</b></div>)}</>);
   else if (view.v === 'page') { const T = { help: ['Help Center', S.helpText], about: ['About Us', S.aboutUs], privacy: ['Privacy Policy', S.privacy], terms: ['Terms & Conditions', S.terms] }[view.page] || ['', ''];
-    page = (<>{back(T[0])}<div className="doc"><p>{T[1]}</p>{view.page === 'help' && <div className="row"><a className="btn" href={`tel:${S.phone1}`}>📞 Call {S.phone1}</a><a className="btn orange" href={waLink(S.phone1, 'Hello ByDoor!')} target="_blank" rel="noopener noreferrer">WhatsApp</a></div>}</div></>); }
+    page = (<>{back(T[0])}<div className="doc"><p>{T[1]}</p>{view.page === 'help' && <div className="row"><a className="btn" href={`tel:${S.phone1}`}>📞 Call {S.phone1}</a></div>}</div></>); }
   else if (view.v === 'favourites') { const fp = avail.filter(p => favs.includes(p._id));
     page = (<>{back('My Favourites')}{fp.length ? <div className="pgrid">{fp.map(p => pcard(p))}</div> : <div className="empty"><div>♡</div><p>No favourites yet. Tap the heart on any product.</p><button className="btn" onClick={() => nav('categories')}>Browse products</button></div>}</>); }
   else if (view.v === 'addresses') page = (<>{back('My Addresses')}{profile?.street ? <div className="addr"><span className="pin"><Ico n="pin" /></span><div><b>Delivery address{profile.defaultAddress && <em className="def">Default</em>}</b><p>{profile.street}</p><small>Pinned at {Number(profile.lat).toFixed(5)}, {Number(profile.lng).toFixed(5)}</small></div><button className="btn sm" onClick={() => setSheet(true)}>Edit</button></div> :
@@ -165,7 +163,6 @@ export default function Home() {
     <nav className="bnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}><i><Ico n={e} s={21} /></i><span>{n}</span>{k === 'cart' && count > 0 && <u className="badge">{count}</u>}</button>)}</nav>
     {help && <div className="drawer center"><div className="dbg" onClick={() => setHelp(false)} /><aside className="sheet"><h3>Install ByDoor app</h3><p><b>iPhone (Safari):</b> tap the Share button, then “Add to Home Screen”.</p><p><b>Android (Chrome):</b> tap the ⋮ menu, then “Install app” or “Add to Home screen”.</p><button className="btn" onClick={() => setHelp(false)}>Got it</button></aside></div>}
     {sheet && <ProfileSheet profile={profile} onClose={() => setSheet(false)} onSaved={p => { setProfile(p); setSheet(false); setToast('Profile saved'); setTimeout(() => setToast(''), 1400); }} />}
-    {!show && !authOpen && <WhatsAppFab phone={S.phone1} />}
     {toast && <div className="toast">{toast}</div>}
   </div>);
 }

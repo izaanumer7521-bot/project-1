@@ -196,3 +196,17 @@ html[data-theme=light] .stat b{text-shadow:none}
 .adm aside>button:last-child{border:1px solid #ffffff26;justify-content:center;text-align:center;margin-top:8px}
 html[data-theme=light] .adm aside>button:last-child{border-color:var(--line)}
 .adm aside>button:last-child:hover{border-color:var(--c1)}
+
+/* ===== Stores: picture avatars, store grid, menu page ===== */
+.shav{overflow:hidden;position:relative}
+.shav img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.shav.xl{width:100%;height:auto;aspect-ratio:1.25;border-radius:18px;font-size:2.8rem;flex:none}
+.shav.lg{overflow:hidden}
+.storegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.storegrid .shopc{width:auto;padding:8px 8px 12px;gap:4px}
+.storegrid .shopc b{min-height:0;justify-content:center;margin-top:6px;padding:0 4px}
+.storegrid .shopc small{color:var(--muted);font-size:.74rem}
+@media(min-width:620px){.storegrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:900px){.storegrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.menucat{margin-top:14px}
+.login .authart{height:170px;margin:2px 0 0}
