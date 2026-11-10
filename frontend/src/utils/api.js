@@ -5,3 +5,7 @@ export const api = async (path, method = 'GET', body) => {
 };
 export const PHONES = ['03229554736', '03067866727'];
 export const CATS = [['breakfast','☕','Breakfast'],['grocery','🛒','Grocery'],['meat','🥩','Meat'],['vegetables','🥬','Vegetables, Fruits'],['desi','🍛','Hotel & Desi Foods'],['fastfood','🍕','Fast Food & Bakery'],['medical','➕','Medical Store'],['ladies','🛍️','Ladies Care'],['home','🧴','Home Essentials'],['kids','🧸','Kids & Beauty'],['rickshaw','🛺','Rickshaw Pick & Drop'],['restaurant','🍽️','Hotel & Restaurant Food'],['mobile','📱','Mobile Repair & Accessories']];
+
+// WhatsApp helpers: '0322 9554736' -> 923229554736, then open a chat with a ready-typed message
+export const waNum = p => { const d = String(p || '').replace(/\D/g, ''); return d.startsWith('92') ? d : '92' + d.replace(/^0/, ''); };
+export const waLink = (phone, text = '') => `https://wa.me/${waNum(phone)}${text ? '?text=' + encodeURIComponent(text) : ''}`;

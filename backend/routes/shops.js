@@ -2,6 +2,8 @@
 import { Router } from 'express'; import bcrypt from 'bcryptjs'; import mongoose from 'mongoose';
 import { Admin, Shop, Product, AdminSubscription } from '../models/index.js'; import { auth, wrap } from '../middleware/auth.js'; import { logAction } from '../utils/log.js';
 const r = Router(), bad = (s, m, c = 400) => s.status(c).json({ error: m }), t = (v, n) => String(v ?? '').trim().slice(0, n), okEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+// Public: active vendor shops for the customer home page (no login, no private fields)
+r.get('/public', wrap(async (q, s) => { const [shops, counts] = await Promise.all([Shop.find({ active: { $ne: false } }).sort({ createdAt: -1 }), Product.aggregate([{ $match: { shopId: { $ne: '' }, available: { $ne: false } } }, { $group: { _id: '$shopId', n: { $sum: 1 } } }])]); const cnt = Object.fromEntries(counts.map(c => [c._id, c.n])); s.json(shops.map(x => ({ _id: x._id, name: x.name, phone: x.phone || '', products: cnt[String(x._id)] || 0 }))); }));
 r.get('/', auth, wrap(async (q, s) => {
   const [shops, vendors, counts] = await Promise.all([Shop.find().sort({ createdAt: -1 }), Admin.find({ role: 'vendor' }), Product.aggregate([{ $match: { shopId: { $ne: '' } } }, { $group: { _id: '$shopId', n: { $sum: 1 } } }])]);
   const cnt = Object.fromEntries(counts.map(c => [c._id, c.n]));
