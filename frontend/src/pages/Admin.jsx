@@ -91,7 +91,7 @@ function Crud({ path, schema, base = path }) {
       : <input type={t || 'text'} value={f[k] ?? ''} onChange={e => setF({ ...f, [k]: t === 'number' ? +e.target.value : e.target.value })} />}</label>)}
     {err && <p className="err">{err}</p>}<button className="btn">Save</button>{f._id && <button type="button" className="btn ghost" onClick={() => setF(blank)}>Cancel</button>}</form>
     <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : r.emoji ? <em>{r.emoji}</em> : null}<span><b>{r.name || r.title}</b><small>{r.price ? `Rs ${r.price} · ${r.category}${r.shopId && path === 'products' ? ' · Shop: ' + ((shops.find(x => x[0] === r.shopId) || [])[1] || 'vendor') : ''}` : r.text || r.subtitle}</small></span></div>
-      <div><button onClick={() => setF(r)}>Edit</button><button onClick={async () => { if (confirm('Delete this item?')) { await api(`${base}/${r._id}`, 'DELETE'); load(); } }}>Delete</button></div></div>)}
+      <div><button className="ebtn" onClick={() => setF(r)}>Edit</button><button className="dbtn" onClick={async () => { if (confirm('Delete this item?')) { await api(`${base}/${r._id}`, 'DELETE'); load(); } }}>Delete</button></div></div>)}
       {!rows.length && <p>Nothing here yet. Add your first one.</p>}</div></div>);
 }
 function OrderEditor({ o, onDone }) {
@@ -120,15 +120,15 @@ function Orders() {
     <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>{rs(o.total)}</b>{o.delivery != null && <small> (incl. {rs(o.delivery)} delivery)</small>}</p>
     <p><span className={'pill ' + (o.paymentStatus === 'Paid' ? 'ok' : o.paymentMethod === 'advance' ? 'warn' : '')}>{PAY[o.paymentMethod || 'cod']} · {o.paymentStatus || 'Unpaid'}</span>{o.paymentRef && <small> TID: {o.paymentRef}{o.paymentAccount && ' → ' + o.paymentAccount}</small>}</p>
     {edit === o._id ? <OrderEditor o={o} onDone={ch => { setEdit(null); ch && load(); }} /> : <>
-      <button onClick={() => setEdit(o._id)}>Edit order</button>
+      <button className="ebtn" onClick={() => setEdit(o._id)}>Edit order</button>
       {o.paymentStatus !== 'Paid' && <button onClick={async () => { await api('orders/' + o._id, 'PUT', { paymentStatus: 'Paid' }); load(); }}>Mark as paid</button>}
       <select value={o.status} onChange={async e => { await api('orders/' + o._id, 'PUT', { status: e.target.value }); load(); }}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(s => <option key={s}>{s}</option>)}</select>
-      <button onClick={async () => { if (confirm('Delete this order? This cannot be undone.')) { await api('orders/' + o._id, 'DELETE'); load(); } }}>Delete</button></>}</div>)}{!rows.length && <p>No orders yet.</p>}</div>);
+      <button className="dbtn" onClick={async () => { if (confirm('Delete this order? This cannot be undone.')) { await api('orders/' + o._id, 'DELETE'); load(); } }}>Delete</button></>}</div>)}{!rows.length && <p>No orders yet.</p>}</div>);
 }
 function Customers() {
   const [rows, setRows] = useState([]), [err, setErr] = useState(''); const load = () => api('customers').then(setRows); useEffect(() => { load(); }, []);
   return (<div className="list">{err && <p className="err">{err}</p>}{rows.map(c => <div key={c._id} className="li"><div><b>{c.phone}{(c.name || c.firstName) && ' · ' + (c.name || c.firstName)}</b>{(c.street || c.email) && <small>{[c.street, c.email].filter(Boolean).join(' · ')}</small>}<small>Joined {dt(c.createdAt)}</small></div>
-    <div><button onClick={async () => { if (confirm(`Delete customer ${c.phone}? Their past orders stay in Orders.`)) { try { await api('customers/' + c._id, 'DELETE'); load(); } catch (x) { setErr(x.message); } } }}>Delete</button></div></div>)}{!rows.length && <p>No signups yet.</p>}</div>);
+    <div><button className="dbtn" onClick={async () => { if (confirm(`Delete customer ${c.phone}? Their past orders stay in Orders.`)) { try { await api('customers/' + c._id, 'DELETE'); load(); } catch (x) { setErr(x.message); } } }}>Delete</button></div></div>)}{!rows.length && <p>No signups yet.</p>}</div>);
 }
 function Account({ email, setEmail }) {
   const [f, setF] = useState({ currentPassword: '', email, newPassword: '' }), [m, setM] = useState('');
@@ -151,8 +151,8 @@ function Shops() {
     {f._id && <label>Shop is active (untick to block login and alerts)<input type="checkbox" checked={!!f.active} onChange={e => setF({ ...f, active: e.target.checked })} /></label>}
     {err && <p className="err">{err}</p>}{ok && <p className="okmsg">{ok}</p>}<button className="btn">{f._id ? 'Save' : 'Create vendor'}</button>{f._id && <button type="button" className="btn ghost" onClick={() => setF(blank)}>Cancel</button>}</form>
     <div className="list">{rows.map(r => <div key={r._id} className="li"><div><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.active ? '🟢 Active' : '🔴 Disabled'}</small></div>
-      <div><button onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, phone: r.phone, email: r.email, password: '', active: r.active }); }}>Edit</button>
-        <button onClick={async () => { if (confirm(`Delete "${r.name}" and its login? Its products stay but are set out of stock.`)) { await api('shops/' + r._id, 'DELETE'); load(); } }}>Delete</button></div></div>)}{!rows.length && <p>No vendors yet. Add your first shop.</p>}</div></div>);
+      <div><button className="ebtn" onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, phone: r.phone, email: r.email, password: '', active: r.active }); }}>Edit</button>
+        <button className="dbtn" onClick={async () => { if (confirm(`Delete "${r.name}" and its login? Its products stay but are set out of stock.`)) { await api('shops/' + r._id, 'DELETE'); load(); } }}>Delete</button></div></div>)}{!rows.length && <p>No vendors yet. Add your first shop.</p>}</div></div>);
 }
 function VendorOrders() {
   const [rows, setRows] = useState(null), [err, setErr] = useState(''), load = () => api('vendor/orders').then(d => { setRows(d); setErr(''); }).catch(x => setErr(x.message));

@@ -91,3 +91,18 @@ html[data-theme=light] .adm aside{background:linear-gradient(180deg,#0b6b2e,#0f8
 html[data-theme=dark] .welcome,html[data-theme=dark] .splash{background-color:#070e15}
 
 .marquee{display:none!important}.tgl.float{right:auto;left:14px}.authwrap{min-height:100%;justify-content:center;padding:70px 0 20px}
+
+/* ===== admin Edit / Delete buttons: visible in light + dark, same colour scheme ===== */
+.li button,.card>button:not(.btn),.acct button,.acrow button,.pager button{background:var(--surface);color:var(--ink);border:1.5px solid var(--line);font-weight:600;transition:.2s}
+.li button:hover,.card>button:not(.btn):hover{border-color:var(--c1);box-shadow:0 0 14px #00c27a55}
+.li .ebtn,.card>.ebtn{color:var(--c1);border-color:var(--c1);background:color-mix(in srgb,var(--c1) 12%,var(--surface))}
+.li .ebtn:hover,.card>.ebtn:hover{background:var(--grad);color:#fff;border-color:transparent;box-shadow:var(--glow)}
+.li .dbtn,.card>.dbtn{color:#ff5a5f;border-color:#ff5a5f;background:color-mix(in srgb,#ff5a5f 12%,var(--surface))}
+.li .dbtn:hover,.card>.dbtn:hover{background:#ff5a5f;color:#fff;border-color:#ff5a5f;box-shadow:0 0 16px #ff5a5f66}
+.li>div:last-child{display:flex;gap:6px;flex-shrink:0}.li button{margin-left:0}
+
+/* ===== dashboard: stat cards side by side on phones too ===== */
+@media(max-width:860px){
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .stat{padding:14px 12px;border-radius:16px}.stat b{font-size:1.25rem;word-break:break-word}.stat small{font-size:.8rem}
+}
