@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import { pushState, enablePush, disablePush, testPush } from '../utils/push.js';
+import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import { pushState, enablePush, disablePush, testPush } from '../utils/push.js';
 const catOpts = CATS.map(c => [c[0], c[2]]);
 const SCHEMA = {
   banners: [['title', 'Title'], ['subtitle', 'Subtitle'], ['image', 'Banner image (best size 1200×600 px, keep text in the centre)', 'image', 1200], ['showText', 'Show title on top of the image', 'bool'], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
@@ -173,24 +173,26 @@ function VendorAccount() {
     <label>New password (8+ characters)<input type="password" required minLength={8} value={f.newPassword} onChange={e => setF({ ...f, newPassword: e.target.value })} /></label>
     {m && <p className="err">{m}</p>}<button className="btn">Save</button></form>);
 }
+const IC = { dashboard: '📊', orders: '🧾', products: '📦', shops: '🏪', banners: '🖼️', categories: '🗂️', reviews: '⭐', customers: '👥', logs: '📜', settings: '⚙️', account: '🔐', vorders: '🧾', vproducts: '📦', vaccount: '🔐' };
+const Bar = ({ open, setOpen, title }) => <><header className="atop"><button type="button" aria-label="Menu" className={'burger' + (open ? ' x' : '')} onClick={() => setOpen(!open)}><i /><i /><i /></button><b>{title}</b><ThemeToggle /></header><div className={'scrim' + (open ? ' on' : '')} onClick={() => setOpen(false)} /></>;
 const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
 const VENDOR_TABS = [['vorders', 'Orders'], ['vproducts', 'My products'], ['vaccount', 'Account']];
 export default function Admin() {
-  const [email, setEmail] = useState(null), [role, setRole] = useState('admin'), [shopName, setShopName] = useState(''), [tab, setTab] = useState('dashboard'), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
+  const [email, setEmail] = useState(null), [role, setRole] = useState('admin'), [shopName, setShopName] = useState(''), [tab, setTab] = useState('dashboard'), [open, setOpen] = useState(false), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
   const who = d => { setEmail(d.email); setRole(d.role || 'admin'); setShopName(d.shopName || ''); };
   useEffect(() => { localStorage.getItem('bd_token') && api('admin/me').then(who).catch(() => localStorage.removeItem('bd_token')); }, []);
   const login = async e => { e.preventDefault(); try { const d = await api('admin/login', 'POST', f); localStorage.setItem('bd_token', d.token); who(d); setErr(''); } catch (x) { setErr(x.message); } };
   const logout = () => { localStorage.removeItem('bd_token'); setEmail(null); setRole('admin'); setTab('dashboard'); };
-  if (!email) return (<div className="loginpage"><form className="login" onSubmit={login}><Logo /><h2>Sign in</h2>
+  if (!email) return (<div className="loginpage"><ThemeToggle float /><form className="login" onSubmit={login}><Logo /><h2>Sign in</h2>
     <input type="email" required placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} />
     <input type="password" required placeholder="Password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} />
     {err && <p className="err">{err}</p>}<button className="btn">Sign in</button></form></div>);
   // VENDOR: the ONLY things rendered are their own products and password. No admin component is even created for them (and the server refuses them anyway).
   if (role === 'vendor') { const t = tab === 'vaccount' || tab === 'vproducts' ? tab : 'vorders';
-    return (<div className="adm"><aside><Logo small /><b>{shopName}</b><small>{email}</small>{VENDOR_TABS.map(([k, n]) => <button key={k} className={t === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}<button onClick={logout}>Log out</button></aside>
+    return (<div className="adm"><Bar open={open} setOpen={setOpen} title={shopName} /><aside className={open ? 'open' : ''}><Logo small /><b>{shopName}</b><small>{email}</small>{VENDOR_TABS.map(([k, n]) => <button key={k} className={t === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}<button onClick={logout}>Log out</button></aside>
       <main><h2>{t === 'vaccount' ? 'Account' : t === 'vproducts' ? 'My products' : 'Orders'}</h2>{t === 'vaccount' ? <VendorAccount /> : t === 'vproducts' ? <Crud key="vp" path="vproducts" schema="vendorProducts" base="vendor/products" /> : <><PushSetup /><VendorOrders /></>}</main></div>); }
-  return (<div className="adm"><aside><Logo small /><small>{email}</small>
-    {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
+  return (<div className="adm"><Bar open={open} setOpen={setOpen} title="ByDoor Admin" /><aside className={open ? 'open' : ''}><Logo small /><small>{email}</small>
+    {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}
     <button onClick={logout}>Log out</button></aside>
     <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }
