@@ -11,4 +11,6 @@ export const Category = mk('Category', { key: { type: String, unique: true }, na
 export const Setting = mk('Setting', { area: String, deliveryTitle: String, deliverySub: String, phone1: String, phone2: String, hours: String, helpText: String, aboutUs: String, privacy: String, terms: String, deliveryFee: { type: Number, default: 100 },
   codEnabled: { type: Boolean, default: true }, codNote: String, advanceEnabled: { type: Boolean, default: false }, advanceNote: String,
   paymentAccounts: [new Schema({ kind: { type: String, default: 'bank' }, provider: String, accountTitle: String, accountNumber: String, note: String }, { _id: false })] });
+// Phone/browser push subscriptions of the admin(s). Collection name: admin_subscriptions
+export const AdminSubscription = model('AdminSubscription', new Schema({ adminId: String, email: String, endpoint: { type: String, unique: true }, keys: { p256dh: String, auth: String }, userAgent: String }, { timestamps: true, collection: 'admin_subscriptions' }));
 export const Log = mk('Log', { actor: String, entity: String, action: String, summary: String, changes: [new Schema({ field: String, from: String, to: String }, { _id: false })] });

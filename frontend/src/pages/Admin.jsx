@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx';
+import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import { pushState, enablePush, disablePush, testPush } from '../utils/push.js';
 const catOpts = CATS.map(c => [c[0], c[2]]);
 const SCHEMA = {
   banners: [['title', 'Title'], ['subtitle', 'Subtitle'], ['image', 'Banner image (best size 1200×600 px, keep text in the centre)', 'image', 1200], ['showText', 'Show title on top of the image', 'bool'], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
@@ -15,11 +15,20 @@ function ImageInput({ value, onChange, max = 800 }) {
 const rs = n => 'Rs ' + Number(n || 0).toLocaleString('en-US');
 const PAY = { cod: 'Cash on Delivery', advance: 'Advance payment' };
 const dt = d => new Date(d).toLocaleString('en-GB', { timeZone: 'Asia/Karachi', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+function PushSetup() {
+  const [st, setSt] = useState('loading'), [m, setM] = useState(''), [busy, setBusy] = useState(false); useEffect(() => { pushState().then(setSt); }, []);
+  const run = async (fn, ok) => { setBusy(true); setM(''); try { const r = await fn(); setM(typeof ok === 'function' ? ok(r) : ok || ''); } catch (x) { setM(x.message); } setSt(await pushState().catch(() => 'default')); setBusy(false); };
+  if (st === 'loading') return null;
+  return (<div className={'card pushcard' + (st === 'on' ? ' on' : '')}><div><b>{st === 'on' ? '🔔 Order alerts are ON for this device' : '🔔 Get a phone alert for every new order'}</b>
+    <small>{st === 'on' ? 'You will get a sound + vibration + lock-screen banner when a customer orders, even when this page is closed.' : st === 'unsupported' ? 'This browser cannot receive push notifications. On iPhone: open this site in Safari → Share → Add to Home Screen, then open it from the Home Screen icon.' : st === 'denied' ? 'Notifications are blocked for this site. Allow them in your browser / phone site settings, then reload this page.' : 'Tap the button on the phone you want alerts on. Your phone will ask permission once.'}</small></div>
+    <div className="prow">{st === 'default' && <button className="btn" disabled={busy} onClick={() => run(enablePush, 'Alerts turned on for this device.')}>Enable order alerts</button>}
+      {st === 'on' && <><button className="btn ghost" disabled={busy} onClick={() => run(testPush, r => r.sent ? 'Test sent. Your phone should buzz in a few seconds.' : r.reason || 'Nothing was delivered. Try “Turn off”, then enable again.')}>Send test alert</button><button className="btn ghost" disabled={busy} onClick={() => run(disablePush, 'Alerts turned off for this device.')}>Turn off</button></>}</div>{m && <p className="err">{m}</p>}</div>);
+}
 function Dashboard() {
   const [range, setRange] = useState('30d'), [d, setD] = useState(null), [err, setErr] = useState('');
   useEffect(() => { setD(null); setErr(''); api('admin/stats?range=' + range).then(setD).catch(x => setErr(x.message)); }, [range]);
   const max = d ? Math.max(1, ...d.series.map(x => x.revenue)) : 1, st = d?.status || {}, label = x => new Date(x + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  return (<div className="dash"><div className="rangebar">{[['today', 'Today'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']].map(([k, n]) => <button key={k} className={range === k ? 'on' : ''} onClick={() => setRange(k)}>{n}</button>)}</div>
+  return (<div className="dash"><PushSetup /><div className="rangebar">{[['today', 'Today'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']].map(([k, n]) => <button key={k} className={range === k ? 'on' : ''} onClick={() => setRange(k)}>{n}</button>)}</div>
     {err && <p className="err">{err}</p>}{!d && !err && <p>Loading…</p>}
     {d && <><div className="stats">
       <div className="stat"><small>Total orders</small><b>{d.orders}</b><em>{st.New || 0} new · {st.Cancelled || 0} cancelled (not counted)</em></div>
@@ -50,7 +59,6 @@ const SET = [['area', 'Delivering to (area)'], ['deliveryTitle', 'Delivery headl
 function Settings() {
   const [f, setF] = useState(null), [m, setM] = useState(''); useEffect(() => { api('settings').then(setF); }, []);
   const save = async e => { e.preventDefault(); try { setF(await api('settings', 'PUT', f)); setM('Saved. The app shows the new settings now.'); } catch (x) { setM(x.message); } };
-  const test = async () => { setM('Sending test message…'); try { const d = await api('orders/test-whatsapp', 'POST'); setM(d.ok ? '✅ Test message sent. Check your WhatsApp now.' : '❌ Failed: ' + d.reason); } catch (x) { setM(x.message); } };
   if (!f) return <p>Loading…</p>;
   return (<form className="card narrow wide" onSubmit={save}><h3>App settings</h3>{SET.map(([k, l, t]) => <label key={k}>{l}{t === 'area' ? <textarea rows="4" value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} /> : <input value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} />}</label>)}
     <h3 className="sub">Payment methods at checkout</h3>
@@ -67,7 +75,7 @@ function Settings() {
       <input placeholder="Extra note (optional, e.g. branch)" value={a.note || ''} onChange={e => ch({ note: e.target.value })} />
       <button type="button" onClick={() => setF({ ...f, paymentAccounts: f.paymentAccounts.filter((_, j) => j !== k) })}>Remove this account</button></div>); })}
     <button type="button" className="btn ghost" onClick={() => setF({ ...f, paymentAccounts: [...(f.paymentAccounts || []), { kind: 'bank', provider: '', accountTitle: '', accountNumber: '', note: '' }] })}>+ Add bank / e-wallet</button>
-    {m && <p className="err">{m}</p>}<button className="btn">Save settings</button><button type="button" className="btn ghost" onClick={test}>Send test WhatsApp message</button></form>);
+    {m && <p className="err">{m}</p>}<button className="btn">Save settings</button></form>);
 }
 function Crud({ path }) {
   const fields = SCHEMA[path], blank = Object.fromEntries(fields.map(([k, , t]) => [k, t === 'bool' ? true : '']));
@@ -110,9 +118,7 @@ function Orders() {
   return (<div className="list">{rows.map(o => <div key={o._id} className="card"><b>{o.name} · {o.phone}</b><small className="when">#{o._id.slice(-5).toUpperCase()} · {dt(o.createdAt)}</small><p>{o.address}{o.note && ` (${o.note})`}{o.lat != null && o.lng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${o.lat},${o.lng}`}>map</a></>}</p>
     <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>{rs(o.total)}</b>{o.delivery != null && <small> (incl. {rs(o.delivery)} delivery)</small>}</p>
     <p><span className={'pill ' + (o.paymentStatus === 'Paid' ? 'ok' : o.paymentMethod === 'advance' ? 'warn' : '')}>{PAY[o.paymentMethod || 'cod']} · {o.paymentStatus || 'Unpaid'}</span>{o.paymentRef && <small> TID: {o.paymentRef}{o.paymentAccount && ' → ' + o.paymentAccount}</small>}</p>
-    <p><small>WhatsApp: {o.notified ? '✅ sent' : '❌ not sent' + (o.notifyError ? ' – ' + o.notifyError : '')}</small></p>
     {edit === o._id ? <OrderEditor o={o} onDone={ch => { setEdit(null); ch && load(); }} /> : <>
-      {!o.notified && <button onClick={async () => { const d = await api(`orders/${o._id}/notify`, 'POST'); alert(d.ok ? 'Sent to WhatsApp' : 'Failed: ' + d.reason); load(); }}>Resend to WhatsApp</button>}
       <button onClick={() => setEdit(o._id)}>Edit order</button>
       {o.paymentStatus !== 'Paid' && <button onClick={async () => { await api('orders/' + o._id, 'PUT', { paymentStatus: 'Paid' }); load(); }}>Mark as paid</button>}
       <select value={o.status} onChange={async e => { await api('orders/' + o._id, 'PUT', { status: e.target.value }); load(); }}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(s => <option key={s}>{s}</option>)}</select>

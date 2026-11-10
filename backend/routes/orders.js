@@ -1,4 +1,4 @@
-import { Router } from 'express'; import mongoose from 'mongoose'; import { Order, Product, Setting } from '../models/index.js'; import { notifyOwner } from '../utils/whatsapp.js'; import { auth, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
+import { Router } from 'express'; import mongoose from 'mongoose'; import { Order, Product, Setting } from '../models/index.js'; import { notifyAdmins } from '../utils/push.js'; import { auth, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
 const code = o => '#' + String(o._id).slice(-5).toUpperCase(), STATUSES = ['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'];
 const r = Router();
 r.post('/', wrap(async (q, s) => {
@@ -21,14 +21,8 @@ r.post('/', wrap(async (q, s) => {
   const paymentRef = t(q.body.paymentRef, 80); if (method === 'advance' && !paymentRef) return s.status(400).json({ error: 'Please enter your transaction ID after sending the payment.' });
   const order = await Order.create({ name, phone, address, note, items: lines, subtotal, delivery, total: subtotal + delivery, paymentMethod: method, paymentStatus: 'Unpaid', paymentRef: method === 'advance' ? paymentRef : '', paymentAccount: method === 'advance' ? t(q.body.paymentAccount, 80) : '', ...geo });
   await logAction({ actor: 'Customer' + ' (' + phone + ')' }, { entity: 'Order', summary: `New order ${code(order)} from ${name} – Rs ${order.total}` });
-  const n = await notifyOwner(order); // awaited so it also works on Vercel serverless
-  order.notified = n.ok; order.notifyError = n.ok ? '' : n.reason; await order.save();
+  await notifyAdmins(order); // awaited on purpose: Vercel stops the function right after the response is sent
   s.json(order.toObject());
-}));
-r.post('/test-whatsapp', auth, wrap(async (q, s) => s.json(await notifyOwner({ _id: new mongoose.Types.ObjectId(), createdAt: new Date(), name: 'TEST ORDER', phone: '03000000000', address: 'This is a test message from your ByDoor admin panel', items: [{ name: 'Test item', price: 1, qty: 1 }], subtotal: 1, delivery: 100, total: 101 }))));
-r.post('/:id/notify', auth, wrap(async (q, s) => {
-  const o = await Order.findById(q.params.id); if (!o) return s.status(404).json({ ok: false, reason: 'Order not found' });
-  const n = await notifyOwner(o); o.notified = n.ok; o.notifyError = n.ok ? '' : n.reason; await o.save(); s.json(n);
 }));
 r.get('/', auth, wrap(async (q, s) => s.json(await Order.find().sort({ createdAt: -1 }))));
 // Admin can edit every part of an order (customer details, location, items, delivery charges, total, payment)
