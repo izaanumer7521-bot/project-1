@@ -87,12 +87,12 @@ export default function Home() {
       <div className="hbtns"><button className="ib" aria-label="Cart" onClick={() => nav('cart')}><Ico n="cart" s={21} />{count > 0 && <u className="badge2">{count}</u>}</button><button className="ib" aria-label="Notifications" onClick={() => nav('notifications')}><Ico n="bell" s={21} /></button></div></div>
     <h1 className="greet"><small>{user ? 'Welcome back 👋' : 'Assalam o Alaikum 👋'}</small>Everything you need, <em>delivered.</em></h1>
     <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search stores…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div></div>
-    <CurveCats items={arcItems} selected={sel} onSelect={k => setSel(k)} />
+    <CurveCats items={arcItems} selected={null} onSelect={k => (k === 'all' ? nav('categories') : nav('catalog', { c: k }))} />
     {needle ? section(`Stores for “${q}”`, '', null, foundStores.length ? <div className="storegrid">{foundStores.map(shopCard)}</div> : <p className="muted">No store found. Try another name.</p>) : <>
       <BannerSlider banners={banners} onCta={() => nav('categories')} />
       {!!shopsWith.length ? <section id="shops"><div className="sh"><h3>🏪 {selCat ? selCat.name + ' Stores' : 'Stores'}</h3><span className="cnt">{homeStores.length}</span></div><p className="sub">Tap a store to see its menu</p>
         {homeStores.length ? <div className="storegrid">{homeStores.map(shopCard)}</div> : <p className="muted">No stores in this category yet.</p>}</section> : <p className="muted">Stores will appear here soon.</p>}
-      <div className="trust"><div><b>🛵</b><span>Fast delivery</span></div><div><b>🏪</b><span>Local stores</span></div><div><b>🔒</b><span>Safe &amp; private</span></div></div>
+      
       {!!reviews.length && section('What customers say', '', null, <div className="hscroll">{reviews.map(r => <blockquote key={r._id}><div className="stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div><p>{r.text}</p><cite>{r.name}</cite></blockquote>)}</div>)}
       <div className="contact"><b>Need help? Talk to us</b><a href={`tel:${S.phone1}`}>📞 {S.phone1}</a><a href={`tel:${S.phone2}`}>📞 {S.phone2}</a><a className="cwa" href={waLink(S.phone1, 'Hello ByDoor!')} target="_blank" rel="noopener noreferrer"><WaIcon size={18} /> Chat on WhatsApp</a><small>{S.hours} · {S.area}</small></div></>}
   </>);
