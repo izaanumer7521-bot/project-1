@@ -1,12 +1,16 @@
 import { Router } from 'express'; import bcrypt from 'bcryptjs'; import jwt from 'jsonwebtoken';
-import { Admin } from '../models/index.js'; import { auth, wrap } from '../middleware/auth.js'; import { logAction } from '../utils/log.js'; import { Order, Customer } from '../models/index.js';
+import { Admin } from '../models/index.js'; import { auth, vendorAuth, wrap } from '../middleware/auth.js'; import { logAction } from '../utils/log.js'; import { Order, Customer, Shop } from '../models/index.js';
 const r = Router();
 r.post('/login', wrap(async (q, s) => {
   const a = await Admin.findOne({ email: (q.body.email || '').toLowerCase().trim() });
   if (!a || !(await bcrypt.compare(q.body.password || '', a.password))) return s.status(401).json({ error: 'Wrong email or password' });
-  s.json({ token: jwt.sign({ id: a._id }, process.env.JWT_SECRET, { expiresIn: '7d' }), email: a.email });
+  if (a.role === 'vendor') { // shop owner: only works while their shop exists and is active
+    const shop = a.shopId && await Shop.findById(a.shopId); if (!shop) return s.status(403).json({ error: 'Your shop no longer exists' }); if (!shop.active) return s.status(403).json({ error: 'This shop account is disabled. Please contact the platform admin.' });
+    return s.json({ token: jwt.sign({ id: a._id, role: 'vendor', shopId: String(shop._id) }, process.env.JWT_SECRET, { expiresIn: '7d' }), email: a.email, role: 'vendor', shopName: shop.name });
+  }
+  s.json({ token: jwt.sign({ id: a._id }, process.env.JWT_SECRET, { expiresIn: '7d' }), email: a.email, role: 'admin' });
 }));
-r.get('/me', auth, wrap(async (q, s) => s.json({ email: (await Admin.findById(q.admin.id)).email })));
+r.get('/me', vendorAuth, wrap(async (q, s) => s.json({ email: (await Admin.findById(q.admin.id)).email, role: q.role, shopName: q.vendor?.shopName || '' })));
 r.put('/account', auth, wrap(async (q, s) => {
   const { currentPassword, email, newPassword } = q.body; const a = await Admin.findById(q.admin.id);
   if (!(await bcrypt.compare(currentPassword || '', a.password))) return s.status(400).json({ error: 'Current password is wrong' });

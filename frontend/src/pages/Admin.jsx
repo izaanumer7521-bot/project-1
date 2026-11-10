@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'; import { api, CATS } from '../utils
 const catOpts = CATS.map(c => [c[0], c[2]]);
 const SCHEMA = {
   banners: [['title', 'Title'], ['subtitle', 'Subtitle'], ['image', 'Banner image (best size 1200×600 px, keep text in the centre)', 'image', 1200], ['showText', 'Show title on top of the image', 'bool'], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
-  products: [['name', 'Name'], ['category', 'Category', 'select', 'cats'], ['price', 'Price (Rs)', 'number'], ['oldPrice', 'Old price (optional, shows a % OFF badge)', 'number'], ['unit', 'Unit (per kg, each…)'], ['image', 'Photo', 'image', 600], ['description', 'Description'], ['bestSeller', 'Show in Best Selling', 'bool'], ['hotDeal', 'Show in Hot Deals', 'bool'], ['available', 'In stock', 'bool']],
+  products: [['name', 'Name'], ['category', 'Category', 'select', 'cats'], ['shopId', 'Vendor shop (leave empty for your own product)', 'select', 'shops'], ['price', 'Price (Rs)', 'number'], ['oldPrice', 'Old price (optional, shows a % OFF badge)', 'number'], ['unit', 'Unit (per kg, each…)'], ['image', 'Photo', 'image', 600], ['description', 'Description'], ['bestSeller', 'Show in Best Selling', 'bool'], ['hotDeal', 'Show in Hot Deals', 'bool'], ['available', 'In stock', 'bool']],
+  vendorProducts: [['name', 'Product name'], ['category', 'Category', 'select', 'cats'], ['price', 'Price (Rs)', 'number'], ['oldPrice', 'Old price (optional, shows a % OFF badge)', 'number'], ['unit', 'Unit (per kg, each…)'], ['image', 'Photo', 'image', 600], ['description', 'Description'], ['available', 'In stock', 'bool']],
   reviews: [['name', 'Customer name'], ['rating', 'Rating (1-5)', 'number'], ['text', 'Review', 'area']],
   categories: [['name', 'Name'], ['key', 'Short code (small letters, no spaces)'], ['emoji', 'Emoji icon (used when no photo)'], ['image', 'Photo (optional)', 'image', 500], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
 };
@@ -77,24 +78,24 @@ function Settings() {
     <button type="button" className="btn ghost" onClick={() => setF({ ...f, paymentAccounts: [...(f.paymentAccounts || []), { kind: 'bank', provider: '', accountTitle: '', accountNumber: '', note: '' }] })}>+ Add bank / e-wallet</button>
     {m && <p className="err">{m}</p>}<button className="btn">Save settings</button></form>);
 }
-function Crud({ path }) {
-  const fields = SCHEMA[path], blank = Object.fromEntries(fields.map(([k, , t]) => [k, t === 'bool' ? true : '']));
-  const [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [cats, setCats] = useState([]);
-  const load = () => api(path).then(setRows); useEffect(() => { setF(blank); load(); api('categories').then(d => setCats(d.map(c => [c.key, c.name]))); }, [path]);
-  const save = async e => { e.preventDefault(); try { f._id ? await api(`${path}/${f._id}`, 'PUT', f) : await api(path, 'POST', f); setF(blank); setErr(''); load(); } catch (x) { setErr(x.message); } };
+function Crud({ path, schema, base = path }) {
+  const fields = SCHEMA[schema || path], blank = Object.fromEntries(fields.map(([k, , t]) => [k, t === 'bool' ? true : '']));
+  const [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [cats, setCats] = useState([]), [shops, setShops] = useState([]);
+  const load = () => api(base).then(setRows); useEffect(() => { setF(blank); load(); api('categories').then(d => setCats(d.map(c => [c.key, c.name]))); if (path === 'products') api('shops').then(d => setShops(d.map(x => [x._id, x.name]))).catch(() => {}); }, [path]);
+  const save = async e => { e.preventDefault(); try { f._id ? await api(`${base}/${f._id}`, 'PUT', f) : await api(base, 'POST', f); setF(blank); setErr(''); load(); } catch (x) { setErr(x.message); } };
   return (<div className="two"><form className="card" onSubmit={save}><h3>{f._id ? 'Edit' : 'Add new'}</h3>
     {fields.map(([k, l, t, o]) => <label key={k}>{l}{t === 'bool' ? <input type="checkbox" checked={!!f[k]} onChange={e => setF({ ...f, [k]: e.target.checked })} />
-      : t === 'select' ? <select required value={f[k]} onChange={e => setF({ ...f, [k]: e.target.value })}><option value="">Choose…</option>{(o === 'cats' ? cats : o).map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select>
+      : t === 'select' ? <select required={o !== 'shops'} value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })}><option value="">{o === 'shops' ? 'None (my own product)' : 'Choose…'}</option>{(o === 'cats' ? cats : o === 'shops' ? shops : o).map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select>
       : t === 'image' ? <ImageInput value={f[k]} max={o} onChange={v => setF({ ...f, [k]: v })} />
       : t === 'area' ? <textarea value={f[k]} onChange={e => setF({ ...f, [k]: e.target.value })} />
       : <input type={t || 'text'} value={f[k] ?? ''} onChange={e => setF({ ...f, [k]: t === 'number' ? +e.target.value : e.target.value })} />}</label>)}
     {err && <p className="err">{err}</p>}<button className="btn">Save</button>{f._id && <button type="button" className="btn ghost" onClick={() => setF(blank)}>Cancel</button>}</form>
-    <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : r.emoji ? <em>{r.emoji}</em> : null}<span><b>{r.name || r.title}</b><small>{r.price ? `Rs ${r.price} · ${r.category}` : r.text || r.subtitle}</small></span></div>
-      <div><button onClick={() => setF(r)}>Edit</button><button onClick={async () => { if (confirm('Delete this item?')) { await api(`${path}/${r._id}`, 'DELETE'); load(); } }}>Delete</button></div></div>)}
+    <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : r.emoji ? <em>{r.emoji}</em> : null}<span><b>{r.name || r.title}</b><small>{r.price ? `Rs ${r.price} · ${r.category}${r.shopId && path === 'products' ? ' · Shop: ' + ((shops.find(x => x[0] === r.shopId) || [])[1] || 'vendor') : ''}` : r.text || r.subtitle}</small></span></div>
+      <div><button onClick={() => setF(r)}>Edit</button><button onClick={async () => { if (confirm('Delete this item?')) { await api(`${base}/${r._id}`, 'DELETE'); load(); } }}>Delete</button></div></div>)}
       {!rows.length && <p>Nothing here yet. Add your first one.</p>}</div></div>);
 }
 function OrderEditor({ o, onDone }) {
-  const [f, setF] = useState({ name: o.name || '', phone: o.phone || '', address: o.address || '', note: o.note || '', lat: o.lat ?? '', lng: o.lng ?? '', status: o.status || 'New', paymentMethod: o.paymentMethod || 'cod', paymentStatus: o.paymentStatus || 'Unpaid', paymentRef: o.paymentRef || '', paymentAccount: o.paymentAccount || '', items: o.items.map(i => ({ name: i.name, price: i.price, qty: i.qty })), delivery: o.delivery ?? 0, total: o.total ?? 0 }), [err, setErr] = useState(''), [busy, setBusy] = useState(false);
+  const [f, setF] = useState({ name: o.name || '', phone: o.phone || '', address: o.address || '', note: o.note || '', lat: o.lat ?? '', lng: o.lng ?? '', status: o.status || 'New', paymentMethod: o.paymentMethod || 'cod', paymentStatus: o.paymentStatus || 'Unpaid', paymentRef: o.paymentRef || '', paymentAccount: o.paymentAccount || '', items: o.items.map(i => ({ name: i.name, price: i.price, qty: i.qty, shopId: i.shopId || '' })), delivery: o.delivery ?? 0, total: o.total ?? 0 }), [err, setErr] = useState(''), [busy, setBusy] = useState(false);
   const sum = it => it.reduce((x, i) => x + (Number(i.price) || 0) * (Number(i.qty) || 0), 0), sub = sum(f.items);
   const up = p => setF(x => { const n = { ...x, ...p }; if (!('total' in p)) n.total = sum(n.items) + (Number(n.delivery) || 0); return n; });
   const item = (k, p) => up({ items: f.items.map((i, j) => j === k ? { ...i, ...p } : i) }), inp = (k, l, t) => <label>{l}<input type={t || 'text'} value={f[k]} onChange={e => up({ [k]: e.target.value })} /></label>;
@@ -138,16 +139,47 @@ function Account({ email, setEmail }) {
     <label>Current password (required)<input type="password" required value={f.currentPassword} onChange={e => setF({ ...f, currentPassword: e.target.value })} /></label>
     {m && <p className="err">{m}</p>}<button className="btn">Save changes</button></form>);
 }
+function Shops() {
+  const blank = { name: '', phone: '', email: '', password: '', active: true }, [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [ok, setOk] = useState('');
+  const load = () => api('shops').then(setRows).catch(x => setErr(x.message)); useEffect(() => { load(); }, []);
+  const save = async e => { e.preventDefault(); setErr(''); setOk(''); try { f._id ? await api('shops/' + f._id, 'PUT', f) : await api('shops', 'POST', f); setOk(f._id ? 'Saved.' : 'Vendor created. Give them the email and password: they sign in at the same /bd-admin page and only see their own products.'); setF(blank); load(); } catch (x) { setErr(x.message); } };
+  return (<div className="two"><form className="card" onSubmit={save}><h3>{f._id ? 'Edit vendor' : 'Add vendor shop'}</h3>
+    <label>Shop name<input required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></label>
+    <label>Shop phone (optional)<input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></label>
+    <label>Vendor login email<input type="email" required value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></label>
+    <label>{f._id ? 'New password (leave empty to keep)' : 'Password (8+ characters)'}<input autoComplete="off" required={!f._id} minLength={f._id && !f.password ? 0 : 8} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></label>
+    {f._id && <label>Shop is active (untick to block login and alerts)<input type="checkbox" checked={!!f.active} onChange={e => setF({ ...f, active: e.target.checked })} /></label>}
+    {err && <p className="err">{err}</p>}{ok && <p className="okmsg">{ok}</p>}<button className="btn">{f._id ? 'Save' : 'Create vendor'}</button>{f._id && <button type="button" className="btn ghost" onClick={() => setF(blank)}>Cancel</button>}</form>
+    <div className="list">{rows.map(r => <div key={r._id} className="li"><div><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.active ? '🟢 Active' : '🔴 Disabled'}</small></div>
+      <div><button onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, phone: r.phone, email: r.email, password: '', active: r.active }); }}>Edit</button>
+        <button onClick={async () => { if (confirm(`Delete "${r.name}" and its login? Its products stay but are set out of stock.`)) { await api('shops/' + r._id, 'DELETE'); load(); } }}>Delete</button></div></div>)}{!rows.length && <p>No vendors yet. Add your first shop.</p>}</div></div>);
+}
+function VendorAccount() {
+  const [f, setF] = useState({ currentPassword: '', newPassword: '' }), [m, setM] = useState('');
+  const save = async e => { e.preventDefault(); try { await api('vendor/account', 'PUT', f); setM('Password changed.'); setF({ currentPassword: '', newPassword: '' }); } catch (x) { setM(x.message); } };
+  return (<form className="card narrow" onSubmit={save}><h3>Change my password</h3>
+    <label>Current password<input type="password" required value={f.currentPassword} onChange={e => setF({ ...f, currentPassword: e.target.value })} /></label>
+    <label>New password (8+ characters)<input type="password" required minLength={8} value={f.newPassword} onChange={e => setF({ ...f, newPassword: e.target.value })} /></label>
+    {m && <p className="err">{m}</p>}<button className="btn">Save</button></form>);
+}
+const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
+const VENDOR_TABS = [['vproducts', 'My products'], ['vaccount', 'Account']];
 export default function Admin() {
-  const [email, setEmail] = useState(null), [tab, setTab] = useState('dashboard'), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
-  useEffect(() => { localStorage.getItem('bd_token') && api('admin/me').then(d => setEmail(d.email)).catch(() => localStorage.removeItem('bd_token')); }, []);
-  const login = async e => { e.preventDefault(); try { const d = await api('admin/login', 'POST', f); localStorage.setItem('bd_token', d.token); setEmail(d.email); } catch (x) { setErr(x.message); } };
-  if (!email) return (<div className="loginpage"><form className="login" onSubmit={login}><Logo /><h2>Admin sign in</h2>
+  const [email, setEmail] = useState(null), [role, setRole] = useState('admin'), [shopName, setShopName] = useState(''), [tab, setTab] = useState('dashboard'), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
+  const who = d => { setEmail(d.email); setRole(d.role || 'admin'); setShopName(d.shopName || ''); };
+  useEffect(() => { localStorage.getItem('bd_token') && api('admin/me').then(who).catch(() => localStorage.removeItem('bd_token')); }, []);
+  const login = async e => { e.preventDefault(); try { const d = await api('admin/login', 'POST', f); localStorage.setItem('bd_token', d.token); who(d); setErr(''); } catch (x) { setErr(x.message); } };
+  const logout = () => { localStorage.removeItem('bd_token'); setEmail(null); setRole('admin'); setTab('dashboard'); };
+  if (!email) return (<div className="loginpage"><form className="login" onSubmit={login}><Logo /><h2>Sign in</h2>
     <input type="email" required placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} />
     <input type="password" required placeholder="Password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} />
     {err && <p className="err">{err}</p>}<button className="btn">Sign in</button></form></div>);
+  // VENDOR: the ONLY things rendered are their own products and password. No admin component is even created for them (and the server refuses them anyway).
+  if (role === 'vendor') { const t = tab === 'vaccount' ? 'vaccount' : 'vproducts';
+    return (<div className="adm"><aside><Logo small /><b>{shopName}</b><small>{email}</small>{VENDOR_TABS.map(([k, n]) => <button key={k} className={t === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}<button onClick={logout}>Log out</button></aside>
+      <main><h2>{t === 'vaccount' ? 'Account' : 'My products'}</h2>{t === 'vaccount' ? <VendorAccount /> : <><PushSetup /><Crud key="vp" path="vproducts" schema="vendorProducts" base="vendor/products" /></>}</main></div>); }
   return (<div className="adm"><aside><Logo small /><small>{email}</small>
-    {[['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']].map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
-    <button onClick={() => { localStorage.removeItem('bd_token'); setEmail(null); }}>Log out</button></aside>
-    <main><h2>{tab === 'logs' ? 'Activity log' : tab[0].toUpperCase() + tab.slice(1)}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
+    {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
+    <button onClick={logout}>Log out</button></aside>
+    <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }
