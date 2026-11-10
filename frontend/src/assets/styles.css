@@ -194,27 +194,3 @@ input[type=checkbox]{width:auto!important;margin-left:10px!important;transform:s
 .payacct{background:#fff8ec;border:1.5px dashed #f0b45a;border-radius:14px;padding:12px;margin-top:10px}.payacct p{margin:0 0 8px;font-size:.92rem}.acrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #f3dfbd}.acrow:first-of-type{border-top:0}.acrow small{display:block;color:#6b5a3a}.acrow b{word-break:break-all}.acrow button{border:1px solid #e0b36a;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;white-space:nowrap}
 .pushcard{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border-left:5px solid var(--or)}.pushcard.on{border-left-color:var(--g)}.pushcard small{display:block;color:#5b6f62;margin-top:3px;max-width:560px}.prow{display:flex;gap:8px;flex-wrap:wrap}.pushcard .err{flex-basis:100%;margin:0}
 .okmsg{color:#0b6b2e;font-weight:600}.adm aside b{color:#fff;padding:0 4px}
-
-/* ===== Admin + vendor theme switch =====
-   DARK mode = your original design, untouched (only the invisible Edit/Delete text is fixed).
-   LIGHT mode = the extra light skin below, applied only when the toggle is on "light". */
-/* fix for BOTH themes: Edit / Delete buttons were white with white text */
-.adm[data-theme=dark] .li button,.adm[data-theme=dark] .card>button:not(.btn),.adm[data-theme=dark] .imgin button,.adm[data-theme=dark] .pager button,.adm[data-theme=dark] .rangebar button:not(.on),.adm[data-theme=dark] .acrow button{color:#10241a;font-weight:600}
-.adm[data-theme=dark] .li>div:last-child button:last-child,.adm[data-theme=dark] .card>button:not(.btn):last-of-type{color:#b3261e}
-/* toggle button */
-.adm aside .themebtn{border:1px solid #ffffff55;text-align:center;margin-top:6px}.adm aside .themebtn:hover{background:var(--g)}
-.loginpage{position:relative}.themebtn.floating{position:absolute;top:16px;right:16px;background:#ffffff26;color:#fff;border:1px solid #ffffff66;border-radius:999px;padding:8px 16px;cursor:pointer;font-weight:600}
-/* LIGHT skin */
-.adm[data-theme=light],.loginpage[data-theme=light]{--bgc:#f6faf3;--panel:#fff;--panel2:#f6faf3;--txt:#10241a;--mut:#5b6f62;--line:#cfe8c6;--inp:#fff;--btnbg:#fff;--btntxt:#10241a;--danger:#b3261e;--dangerline:#e0b4b0;--accent:#0b6b2e;--side:#0b3d1f;color-scheme:light}
-.adm[data-theme=light]{background:var(--bgc);color:var(--txt)}.adm[data-theme=light] aside{background:var(--side)}.adm[data-theme=light] main h2{color:#0b3d1f}
-.adm[data-theme=light] .card,.adm[data-theme=light] .li,.adm[data-theme=light] .stat{background:var(--panel);color:var(--txt);box-shadow:0 2px 12px #0b6b2e14}
-.adm[data-theme=light] small,.adm[data-theme=light] .li small,.adm[data-theme=light] .stat small,.adm[data-theme=light] .stat em,.adm[data-theme=light] .when,.adm[data-theme=light] .legend,.adm[data-theme=light] .axis,.adm[data-theme=light] .row2 small,.adm[data-theme=light] .logrow small,.adm[data-theme=light] .muted2,.adm[data-theme=light] .pushcard small{color:var(--mut)}
-.adm[data-theme=light] .stat b{color:#0b3d1f}.adm[data-theme=light] .stat.o b{color:#c25e00}.adm[data-theme=light] .row2{border-bottom-color:#eef3ec}.adm[data-theme=light] .bar .col{background:#eef3ec}
-.adm[data-theme=light] input,.adm[data-theme=light] select,.adm[data-theme=light] textarea{background:var(--inp);color:var(--txt);border-color:var(--line)}
-.adm[data-theme=light] .oedit,.adm[data-theme=light] .acct{background:var(--panel2);border-color:var(--line)}
-.adm[data-theme=light] .li button,.adm[data-theme=light] .card>button:not(.btn),.adm[data-theme=light] .imgin button,.adm[data-theme=light] .pager button,.adm[data-theme=light] .rangebar button,.adm[data-theme=light] .acrow button,.adm[data-theme=light] .btn.ghost{background:var(--btnbg);color:var(--btntxt);border:1px solid var(--line);font-weight:600}
-.adm[data-theme=light] .li>div:last-child button:last-child,.adm[data-theme=light] .card>button:not(.btn):last-of-type,.adm[data-theme=light] .acct button{color:var(--danger);border-color:var(--dangerline)}
-.adm[data-theme=light] .rangebar button.on{background:var(--g);color:#fff;border-color:var(--g)}
-.adm[data-theme=light] .btn:not(.ghost){background:var(--g);color:#fff;border:0}
-/* Phones: dashboard number cards sit side by side (2 per row), both themes */
-@media(max-width:820px){.adm main{padding:16px}.adm .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.adm .stat{padding:12px;min-width:0}.adm .stat small{font-size:.78rem}.adm .stat b{font-size:1.2rem;word-break:break-word}.adm .stat em{font-size:.72rem}}

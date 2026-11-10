@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, CATS, PHONES } from '../utils/api.js';
-import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import BannerSlider from '../components/BannerSlider.jsx';
+import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import BannerSlider from '../components/BannerSlider.jsx';
 
 const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100, codEnabled: true, codNote: '', advanceEnabled: false, advanceNote: '', paymentAccounts: [] };
 const ICON = { orders: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 7h6M9 11h6'], heart: ['M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z'], pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'], user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'], bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'], help: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'], info: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M12 16v-4M12 8h.01'], shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'M9 12l2 2 4-4'], file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6M16 13H8M16 17H8'], logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5M21 12H9'], down: ['M12 3v12M7 10l5 5 5-5M5 21h14'] };
@@ -136,11 +136,12 @@ export default function Home() {
       <div className="pmenu">{rows.map(([ic, t, c, fn]) => <button key={t} className={c} onClick={fn}><span className="ic"><Ico n={ic} /></span><b>{t}</b><i>›</i></button>)}</div></>); }
 
   return (<div className="app">
+    {(show || authOpen) && <ThemeToggle float />}
     {show && <Welcome needAuth={!localStorage.getItem('bd_user') && !localStorage.getItem('bd_skip')} onDone={welcomeDone} />}
     {authOpen && <Welcome startAuth needAuth onDone={welcomeDone} />}
     <header className="top"><button className="brand" aria-label="Home" onClick={() => nav('home')}><Logo small /></button>
       <nav className="dnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}>{n}{k === 'cart' && count ? ` (${count})` : ''}</button>)}</nav>
-      <div className="acts">{!done && <button className="instbtn" onClick={install}>⬇ <span>Install app</span></button>}</div></header>
+      <div className="acts"><ThemeToggle />{!done && <button className="instbtn" onClick={install}>⬇ <span>Install app</span></button>}</div></header>
     <main className="main" key={view.v + (view.c || '') + (view.page || '')}>{page}</main>
     <nav className="bnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}><i>{e}</i><span>{n}</span>{k === 'cart' && count > 0 && <u className="badge">{count}</u>}</button>)}</nav>
     {help && <div className="drawer center"><div className="dbg" onClick={() => setHelp(false)} /><aside className="sheet"><h3>Install ByDoor app</h3><p><b>iPhone (Safari):</b> tap the Share button, then “Add to Home Screen”.</p><p><b>Android (Chrome):</b> tap the ⋮ menu, then “Install app” or “Add to Home screen”.</p><button className="btn" onClick={() => setHelp(false)}>Got it</button></aside></div>}

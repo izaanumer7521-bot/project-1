@@ -1,5 +1,5 @@
 import React from 'react'; import { createRoot } from 'react-dom/client'; import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home.jsx'; import Admin from './pages/Admin.jsx'; import './assets/styles.css';
+import Home from './pages/Home.jsx'; import Admin from './pages/Admin.jsx'; import './assets/styles.css'; import './assets/theme.css'; import { initTheme } from './components/ThemeToggle.jsx'; initTheme();
 createRoot(document.getElementById('root')).render(<BrowserRouter><Routes>
   <Route path="/" element={<Home />} />
   <Route path="/bd-admin" element={<Admin />} />{/* hidden: not linked anywhere */}
