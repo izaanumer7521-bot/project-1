@@ -5,7 +5,8 @@ body,.app,.adm,.welcome{background:var(--bg2);color:var(--ink);transition:backgr
 html[data-theme=dark] body{background:#070e15}
 .app::before,.adm::before,.welcome::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(520px 320px at 8% -4%,#00c27a30,transparent 70%),radial-gradient(520px 360px at 100% 8%,#8b5cf62e,transparent 70%),radial-gradient(500px 340px at 50% 110%,#ff8a3d26,transparent 70%)}
 html[data-theme=dark] .app::before,html[data-theme=dark] .adm::before{opacity:1.4}
-.app>*,.adm>*{position:relative;z-index:1}
+.main,.adm main{position:relative;z-index:1}
+.welcome>*{position:relative;z-index:1}
 /* surfaces */
 .top,.bnav,.card,.li,.dcard,.search,.pc,.ccard,.gcat,.login,.psheet,.sheet,.ocard,.receipt .rc-card,.sumbox,.pcard,.pmenu,.pstats>div,.cl,.ci2,.doc,.addr,blockquote,.paybox{background:var(--surface);color:var(--ink);border-color:var(--line)}
 .top{background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(16px);border-bottom:0;box-shadow:0 1px 0 var(--line),0 6px 30px #00c27a1f}
@@ -85,3 +86,6 @@ html[data-theme=light] .adm aside{background:linear-gradient(180deg,#0b6b2e,#0f8
  .scrim{display:block;position:fixed;inset:0;background:#0008;backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:.3s;z-index:70}.scrim.on{opacity:1;pointer-events:auto}
  .adm main{padding:16px 14px 40px}
 }
+
+.swlink{margin-top:16px;color:var(--muted)}.swlink a{color:var(--c2);font-weight:800;border-bottom:2px dashed var(--c1);cursor:pointer}
+html[data-theme=dark] .welcome,html[data-theme=dark] .splash{background-color:#070e15}

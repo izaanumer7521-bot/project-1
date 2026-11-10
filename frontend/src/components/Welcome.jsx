@@ -21,7 +21,7 @@ export default function Welcome({ needAuth, onDone, startAuth }) {
         <div className="phone"><b>🇵🇰 +92</b><input inputMode="numeric" autoComplete="tel" placeholder="Enter your Mobile Number" value={phone} onChange={e => setPhone(e.target.value.replace(/[^\d]/g, '').slice(0, 11))} /></div>
         {err && <p className="err">{err}</p>}
         <button className="btn big" disabled={busy || phone.replace(/^0/, '').length < 10}>{busy ? 'Please wait…' : mode === 'signup' ? 'Sign Up' : 'Log In'}</button>
-        <p className="switch">{mode === 'signup' ? 'Already have an account?' : "Don't have an account?"} <a onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setErr(''); }}>{mode === 'signup' ? 'Log In here' : 'Sign Up here'}</a></p>
+        <p className="swlink">{mode === 'signup' ? 'Already have an account?' : "Don't have an account?"} <a onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setErr(''); }}>{mode === 'signup' ? 'Log In here' : 'Sign Up here'}</a></p>
       </form></div>}
   </div>);
 }
