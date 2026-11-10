@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api, CATS, PHONES, waLink } from '../utils/api.js'; import { WhatsAppFab, WaOrderBox, WaIcon } from '../components/WhatsApp.jsx';
-import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import BannerSlider from '../components/BannerSlider.jsx';
+import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import BannerSlider from '../components/BannerSlider.jsx'; import CurveCats from '../components/CurveCats.jsx';
 
 const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100, codEnabled: true, codNote: '', advanceEnabled: false, advanceNote: '', paymentAccounts: [] };
-const ICON = { orders: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 7h6M9 11h6'], heart: ['M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z'], pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'], user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'], bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'], help: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'], info: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M12 16v-4M12 8h.01'], shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'M9 12l2 2 4-4'], file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6M16 13H8M16 17H8'], logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5M21 12H9'], down: ['M12 3v12M7 10l5 5 5-5M5 21h14'] };
-const Ico = ({ n }) => <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICON[n].map((d, i) => <path key={i} d={d} />)}</svg>;
-const TABS = [['home', '🏠', 'Home'], ['categories', '🗂️', 'Categories'], ['orders', '🧾', 'Orders'], ['cart', '🛒', 'Cart'], ['profile', '👤', 'Profile']];
+const ICON = { orders: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 7h6M9 11h6'], heart: ['M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z'], pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'], user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'], bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'], help: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'], info: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M12 16v-4M12 8h.01'], shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'M9 12l2 2 4-4'], file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6M16 13H8M16 17H8'], logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5M21 12H9'], down: ['M12 3v12M7 10l5 5 5-5M5 21h14'], home: ['M3 10.5L12 3l9 7.5V21H3z', 'M9 21v-7h6v7'], grid: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M3 14h7v7H3z', 'M14 14h7v7h-7z'], cart: ['M6 6h15l-1.5 9h-12z', 'M6 6L5 3H2', 'M9 20.5h.01', 'M18 20.5h.01'], search: ['M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z', 'M21 21l-4.3-4.3'], filter: ['M4 6h16', 'M7 12h10', 'M10 18h4'] };
+const Ico = ({ n, s = 22 }) => <svg viewBox="0 0 24 24" width={s} height={s} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICON[n].map((d, i) => <path key={i} d={d} />)}</svg>;
+const TABS = [['home', 'home', 'Home'], ['categories', 'grid', 'Categories'], ['orders', 'orders', 'Orders'], ['cart', 'cart', 'Cart'], ['profile', 'user', 'Profile']];
 const rs = n => 'Rs ' + Number(n || 0).toLocaleString();
 const jget = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const Thumb = ({ item }) => <div className="thumb">{item.image ? <img src={item.image} alt={item.name} loading="lazy" /> : <span>{item.emoji || '📦'}</span>}</div>;
@@ -18,6 +18,7 @@ export default function Home() {
   const [show, setShow] = useState(!sessionStorage.getItem('bd_splash')), [authOpen, setAuthOpen] = useState(false), [help, setHelp] = useState(false), [inst, setInst] = useState(null);
   const [profile, setProfile] = useState(null), [sheet, setSheet] = useState(false), [favs, setFavs] = useState(() => jget('bd_favs', []));
   const [done, setDone] = useState(matchMedia('(display-mode: standalone)').matches);
+  const [sel, setSel] = useState('all'), [sort, setSort] = useState('pop'), [fopen, setFopen] = useState(false);
 
   useEffect(() => {
     api('banners').then(d => setB(d.filter(b => b.active))).catch(() => {}); api('products').then(setP).catch(() => {}); api('reviews').then(setR).catch(() => {}); api('shops/public').then(setShops).catch(() => {});
@@ -74,18 +75,24 @@ export default function Home() {
   const back = t => <div className="ptitle"><button className="back" aria-label="Back" onClick={() => history.back()}>‹</button><h2>{t}</h2></div>;
   const needle = q.trim().toLowerCase(), found = needle ? avail.filter(p => (p.name + ' ' + (p.description || '') + ' ' + (list.find(c => c.key === p.category)?.name || '')).toLowerCase().includes(needle)) : [];
 
+  const selCat = sel === 'all' ? null : list.find(c => c.key === sel), arcItems = [{ key: 'all', name: 'All', emoji: '✨' }, ...list.map(c => ({ key: c.key, name: c.name, emoji: c.emoji, image: c.image }))];
+  let ours = avail.filter(p => sel === 'all' || p.category === sel);
+  if (sort === 'deal') ours = ours.filter(p => p.oldPrice > p.price); else if (sort === 'low') ours = [...ours].sort((a, b) => a.price - b.price); else if (sort === 'high') ours = [...ours].sort((a, b) => b.price - a.price); else ours = [...ours].sort((a, b) => (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0));
+
   let page;
   if (view.v === 'home') page = (<>
-    <div className="hero2"><div className="hglow" /><small>{user ? 'Welcome back 👋' : 'Assalam o Alaikum 👋'}</small><h1>Everything you need,<br /><span>delivered to your door.</span></h1><p>Order from local shops in {S.area}. {S.deliveryTitle} · {S.deliverySub}</p>
-      <div className="search hs"><span>🔍</span><input placeholder="Search products, shops, categories…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div>
-      <div className="qa"><a href="#wa-order" className="qwa"><WaIcon size={18} /> Type & Order</a><button onClick={() => nav('categories')}>🗂️ Categories</button><a href="#shops">🏪 Shops</a><a href={`tel:${S.phone1}`}>📞 Call</a></div></div>
-    <div className="dcard"><div><em>📍</em><span><small>DELIVERING TO</small><b>{S.area}</b></span></div><div><em>🛵</em><span><b className="g">{S.deliveryTitle}</b><small>{S.deliverySub}</small></span></div></div>
+    <div className="hhead"><div className="loc"><span className="locic"><Ico n="pin" s={20} /></span><span><small>Delivery location</small><b>{S.area}</b></span></div>
+      <div className="hbtns"><button className="ib" aria-label="Cart" onClick={() => nav('cart')}><Ico n="cart" s={21} />{count > 0 && <u className="badge2">{count}</u>}</button><button className="ib" aria-label="Notifications" onClick={() => nav('notifications')}><Ico n="bell" s={21} /></button></div></div>
+    <h1 className="greet"><small>{user ? 'Welcome back 👋' : 'Assalam o Alaikum 👋'}</small>Everything you need, <em>delivered.</em></h1>
+    <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search menu, shops…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div><button type="button" className={'fbtn' + (fopen || sort !== 'pop' ? ' on' : '')} aria-label="Filter" onClick={() => setFopen(!fopen)}><Ico n="filter" s={20} /></button></div>
+    {fopen && <div className="chips">{[['pop', 'Popular'], ['low', 'Price: low → high'], ['high', 'Price: high → low'], ['deal', '⚡ Deals only']].map(([k, n]) => <button key={k} className={sort === k ? 'on' : ''} onClick={() => setSort(k)}>{n}</button>)}</div>}
+    <CurveCats items={arcItems} selected={sel} onSelect={k => setSel(k)} />
     {needle ? section(`Results for “${q}”`, '', null, found.length ? <div className="pgrid">{found.map(p => pcard(p))}</div> : <><p className="muted">Nothing found. Just type it below and we will bring it.</p><WaOrderBox phone={S.phone1} /></>) : <>
       <BannerSlider banners={banners} onCta={() => nav('categories')} />
+      {section(selCat ? selCat.name : 'Our Items', 'View All', () => (selCat ? nav('catalog', { c: selCat.key }) : nav('categories')), ours.length ? <div className="pgrid">{ours.slice(0, 12).map(p => pcard(p))}</div> : <p className="muted">Nothing here yet. Type it below and we will bring it to you.</p>, 'ouritems')}
       <div id="wa-order"><WaOrderBox phone={S.phone1} /></div>
       {!!shopsWith.length && <section id="shops">{<div className="sh"><h3>🏪 Our Vendor Shops</h3><span className="cnt">{shopsWith.length}</span></div>}<p className="sub">Tap a shop to see everything it sells</p><div className="hscroll">{shopsWith.map(shopCard)}</div></section>}
       {shopsWith.filter(x => x.items.length).slice(0, 4).map(x => <section key={x._id} className="shopsec"><div className="sh"><h3><span className="shav sm" style={{ background: `linear-gradient(135deg,${x.pal})` }}>{x.name.trim().slice(0, 1).toUpperCase()}</span>{x.name}</h3><button onClick={() => nav('shop', { s: x._id })}>View shop</button></div><div className="hscroll">{x.items.slice(0, 8).map(p => pcard(p))}</div></section>)}
-      {section('Categories', 'View All', () => nav('categories'), <div className="hscroll">{list.map(c => catCard(c, 'ccard'))}</div>)}
       {section('Best Selling', 'View All', () => nav('categories'), <div className="hscroll">{best.map(p => pcard(p))}</div>)}
       {!!hot.length && <section className="hot"><div className="sh"><h3>🔥 Hot Deals</h3><span className="cnt">{hot.length}</span></div><p className="sub">Offers that cost less than usual</p><div className="hscroll">{hot.map(p => pcard(p, true))}</div></section>}
       <div className="trust"><div><b>🛵</b><span>Fast delivery</span></div><div><b>🏪</b><span>Local shops</span></div><div><b>💬</b><span>Order by WhatsApp</span></div></div>
@@ -148,14 +155,14 @@ export default function Home() {
       <div className="pmenu">{rows.map(([ic, t, c, fn]) => <button key={t} className={c} onClick={fn}><span className="ic"><Ico n={ic} /></span><b>{t}</b><i>›</i></button>)}</div></>); }
 
   return (<div className="app">
-    {(show || authOpen) && <ThemeToggle float />}
+    {(show || authOpen) && <ThemeToggle float="welcome" />}
     {show && <Welcome needAuth={!localStorage.getItem('bd_user') && !localStorage.getItem('bd_skip')} onDone={welcomeDone} />}
     {authOpen && <Welcome startAuth needAuth onDone={welcomeDone} />}
     <header className="top"><button className="brand" aria-label="Home" onClick={() => nav('home')}><Logo small /></button>
       <nav className="dnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}>{n}{k === 'cart' && count ? ` (${count})` : ''}</button>)}</nav>
       <div className="acts"><a className="hwa" aria-label="WhatsApp" href={waLink(S.phone1, 'Hello ByDoor!')} target="_blank" rel="noopener noreferrer"><WaIcon size={20} /></a><ThemeToggle />{!done && <button className="instbtn" onClick={install}>⬇ <span>Install app</span></button>}</div></header>
     <main className="main" key={view.v + (view.c || '') + (view.page || '')}>{page}</main>
-    <nav className="bnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}><i>{e}</i><span>{n}</span>{k === 'cart' && count > 0 && <u className="badge">{count}</u>}</button>)}</nav>
+    <nav className="bnav">{TABS.map(([k, e, n]) => <button key={k} className={view.v === k ? 'on' : ''} onClick={() => nav(k)}><i><Ico n={e} s={21} /></i><span>{n}</span>{k === 'cart' && count > 0 && <u className="badge">{count}</u>}</button>)}</nav>
     {help && <div className="drawer center"><div className="dbg" onClick={() => setHelp(false)} /><aside className="sheet"><h3>Install ByDoor app</h3><p><b>iPhone (Safari):</b> tap the Share button, then “Add to Home Screen”.</p><p><b>Android (Chrome):</b> tap the ⋮ menu, then “Install app” or “Add to Home screen”.</p><button className="btn" onClick={() => setHelp(false)}>Got it</button></aside></div>}
     {sheet && <ProfileSheet profile={profile} onClose={() => setSheet(false)} onSaved={p => { setProfile(p); setSheet(false); setToast('Profile saved'); setTimeout(() => setToast(''), 1400); }} />}
     {!show && !authOpen && <WhatsAppFab phone={S.phone1} />}

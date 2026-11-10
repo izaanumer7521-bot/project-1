@@ -189,10 +189,10 @@ export default function Admin() {
     {err && <p className="err">{err}</p>}<button className="btn">Sign in</button></form></div>);
   // VENDOR: the ONLY things rendered are their own products and password. No admin component is even created for them (and the server refuses them anyway).
   if (role === 'vendor') { const t = tab === 'vaccount' || tab === 'vproducts' ? tab : 'vorders';
-    return (<div className="adm"><Bar open={open} setOpen={setOpen} title={shopName} /><aside className={open ? 'open' : ''}><Logo small /><b>{shopName}</b><small>{email}</small>{VENDOR_TABS.map(([k, n]) => <button key={k} className={t === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}<button onClick={logout}>Log out</button></aside>
+    return (<div className="adm"><Bar open={open} setOpen={setOpen} title={shopName} /><aside className={open ? 'open' : ''}><Logo small /><b>{shopName}</b><small>{email}</small>{VENDOR_TABS.map(([k, n]) => <button key={k} className={t === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}<div className="sidetgl"><ThemeToggle /><span>Light / Dark mode</span></div><button onClick={logout}>Log out</button></aside>
       <main><h2>{t === 'vaccount' ? 'Account' : t === 'vproducts' ? 'My products' : 'Orders'}</h2>{t === 'vaccount' ? <VendorAccount /> : t === 'vproducts' ? <Crud key="vp" path="vproducts" schema="vendorProducts" base="vendor/products" /> : <><PushSetup /><VendorOrders /></>}</main></div>); }
   return (<div className="adm"><Bar open={open} setOpen={setOpen} title="ByDoor Admin" /><aside className={open ? 'open' : ''}><Logo small /><small>{email}</small>
     {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}
-    <button onClick={logout}>Log out</button></aside>
+    <div className="sidetgl"><ThemeToggle /><span>Light / Dark mode</span></div><button onClick={logout}>Log out</button></aside>
     <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }
