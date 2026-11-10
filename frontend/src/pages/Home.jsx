@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, CATS, PHONES } from '../utils/api.js';
 import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import BannerSlider from '../components/BannerSlider.jsx';
 
-const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100 };
+const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100, codEnabled: true, codNote: '', advanceEnabled: false, advanceNote: '', paymentAccounts: [] };
 const ICON = { orders: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 7h6M9 11h6'], heart: ['M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z'], pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'], user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'], bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'], help: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'], info: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M12 16v-4M12 8h.01'], shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'M9 12l2 2 4-4'], file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6M16 13H8M16 17H8'], logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5M21 12H9'], down: ['M12 3v12M7 10l5 5 5-5M5 21h14'] };
 const Ico = ({ n }) => <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICON[n].map((d, i) => <path key={i} d={d} />)}</svg>;
 const TABS = [['home', '🏠', 'Home'], ['categories', '🗂️', 'Categories'], ['orders', '🧾', 'Orders'], ['cart', '🛒', 'Cart'], ['profile', '👤', 'Profile']];
@@ -14,7 +14,7 @@ export default function Home() {
   const [banners, setB] = useState([]), [products, setP] = useState([]), [reviews, setR] = useState([]), [cats, setC] = useState([]), [S, setS] = useState(DEF);
   const [view, setView] = useState({ v: 'home' }), [q, setQ] = useState(''), [cq, setCq] = useState(''), [toast, setToast] = useState('');
   const [cart, setCart] = useState(() => jget('bd_cart', {})), [user, setUser] = useState(localStorage.getItem('bd_user')), [orders, setOrders] = useState(null), [placed, setPlaced] = useState(null);
-  const [f, setF] = useState({ name: '', address: '', note: '' }), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
+  const [f, setF] = useState({ name: '', address: '', note: '' }), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false), [pay, setPay] = useState({ method: '', ref: '', account: '' });
   const [show, setShow] = useState(!sessionStorage.getItem('bd_splash')), [authOpen, setAuthOpen] = useState(false), [help, setHelp] = useState(false), [inst, setInst] = useState(null);
   const [profile, setProfile] = useState(null), [sheet, setSheet] = useState(false), [favs, setFavs] = useState(() => jget('bd_favs', []));
   const [done, setDone] = useState(matchMedia('(display-mode: standalone)').matches);
@@ -42,12 +42,16 @@ export default function Home() {
   const emojiOf = k => list.find(c => c.key === k)?.emoji;
   const nav = (v, extra = {}) => { const s = { v, ...extra }; history.pushState(s, ''); setView(s); scrollTo(0, 0); };
   const items = Object.values(cart), count = items.reduce((s, i) => s + i.qty, 0), total = items.reduce((s, i) => s + i.qty * i.price, 0), fee = Number(S.deliveryFee ?? 100), grand = total + fee;
+  const accts = (S.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!S.advanceEnabled && accts.length > 0, codOn = S.codEnabled !== false || !advOn, method = pay.method === 'advance' && advOn ? 'advance' : pay.method === 'cod' && codOn ? 'cod' : codOn ? 'cod' : 'advance';
+  const copy = t => { try { navigator.clipboard.writeText(t); setMsg(''); } catch {} };
   const add = (p, d = 1) => { setCart(c => { const n = { ...c }, qty = (c[p._id]?.qty || 0) + d; if (qty <= 0) delete n[p._id]; else n[p._id] = { _id: p._id, name: p.name, price: p.price, qty, emoji: emojiOf(p.category), image: p.image }; return n; }); if (d > 0) { setToast(p.name + ' added'); setTimeout(() => setToast(''), 1100); } };
   const install = async () => { if (inst) { inst.prompt(); await inst.userChoice; setInst(null); } else setHelp(true); };
   const order = async e => {
-    e.preventDefault(); setBusy(true); setMsg('');
-    try { const d = await api('orders', 'POST', { ...f, phone: user || f.phone, items: items.map(({ _id, name, qty }) => ({ _id, name, qty })), ...(profile?.lat != null && f.address.trim() === (profile.street || '').trim() ? { lat: profile.lat, lng: profile.lng } : {}) });
-      localStorage.setItem('bd_orders', JSON.stringify([d._id, ...jget('bd_orders', [])].slice(0, 30))); setCart({}); setPlaced(d); } catch (x) { setMsg(x.message); } setBusy(false);
+    e.preventDefault(); setMsg('');
+    if (method === 'advance' && !pay.ref.trim()) return setMsg('Please send the payment first, then enter your transaction ID.');
+    setBusy(true);
+    try { const d = await api('orders', 'POST', { ...f, paymentMethod: method, paymentRef: pay.ref, paymentAccount: pay.account || (accts[0] ? accts[0].provider : ''), phone: user || f.phone, items: items.map(({ _id, name, qty }) => ({ _id, name, qty })), ...(profile?.lat != null && f.address.trim() === (profile.street || '').trim() ? { lat: profile.lat, lng: profile.lng } : {}) });
+      localStorage.setItem('bd_orders', JSON.stringify([d._id, ...jget('bd_orders', [])].slice(0, 30))); setCart({}); setPay({ method: '', ref: '', account: '' }); setPlaced(d); } catch (x) { setMsg(x.message); } setBusy(false);
   };
 
   const toggleFav = p => setFavs(a => a.includes(p._id) ? a.filter(x => x !== p._id) : [...a, p._id]);
@@ -89,7 +93,7 @@ export default function Home() {
       <div className="rc-card"><div className="rc-h"><b>Order #{placed._id.slice(-5).toUpperCase()}</b><small>{new Date(placed.createdAt).toLocaleString()}</small></div>
         <div className="rc-sec"><small>DELIVER TO</small><b>{placed.name}</b><p>{placed.phone}</p><p>{placed.address}</p>{placed.note && <p>Note: {placed.note}</p>}</div>
         <div className="rc-sec"><small>ORDER DETAILS</small>{placed.items.map((i, k) => <div className="rc-row" key={k}><span>{i.name} <em>× {i.qty}</em></span><b>{rs(i.price * i.qty)}</b></div>)}</div>
-        <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div></div></div>
+        <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div><div className="rc-row"><span>Payment</span><b>{placed.paymentMethod === 'advance' ? 'Advance (we will verify your payment)' : 'Cash on Delivery'}</b></div></div></div>
       <div className="row"><button className="btn" onClick={() => { setPlaced(null); nav('orders'); }}>Track my order</button><button className="btn ghost" onClick={() => { setPlaced(null); nav('home'); }}>Continue shopping</button></div></div> :
     !items.length ? <div className="empty"><div>🛒</div><p>Your cart is empty</p><button className="btn" onClick={() => nav('categories')}>Start shopping</button></div> : <>
       <div className="cl">{items.map(i => <div key={i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}</div></div>)}</div>
@@ -98,6 +102,14 @@ export default function Home() {
         <input required inputMode="tel" placeholder="Phone number" value={user || f.phone || ''} readOnly={!!user} onChange={e => setF({ ...f, phone: e.target.value })} />
         <textarea required placeholder="Delivery address" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} />
         <input placeholder="Note (optional)" value={f.note} onChange={e => setF({ ...f, note: e.target.value })} />
+        <div className="paybox"><b>Payment method</b>
+          {codOn && <label className={'payopt' + (method === 'cod' ? ' on' : '')}><input type="radio" name="pm" checked={method === 'cod'} onChange={() => setPay({ ...pay, method: 'cod' })} /><span><b>Cash on Delivery</b><small>{S.codNote || 'Pay in cash when your order arrives.'}</small></span></label>}
+          {advOn && <label className={'payopt' + (method === 'advance' ? ' on' : '')}><input type="radio" name="pm" checked={method === 'advance'} onChange={() => setPay({ ...pay, method: 'advance' })} /><span><b>Advance payment</b><small>Pay by bank transfer or e-wallet before we deliver.</small></span></label>}
+          {method === 'advance' && <div className="payacct"><p>{S.advanceNote || 'Send the total amount to one of the accounts below, then enter the transaction ID.'} <b>Amount: {rs(grand)}</b></p>
+            {accts.map((a, k) => <div key={k} className="acrow"><div><b>{a.provider || (a.kind === 'ewallet' ? 'E-wallet' : 'Bank')}</b><small>{a.accountTitle}{a.note && ' · ' + a.note}</small><b>{a.accountNumber}</b></div><button type="button" onClick={() => copy(a.accountNumber)}>Copy</button></div>)}
+            {accts.length > 1 && <select value={pay.account} onChange={e => setPay({ ...pay, account: e.target.value })}><option value="">Which account did you pay?</option>{accts.map((a, k) => <option key={k} value={a.provider}>{a.provider}</option>)}</select>}
+            <input required placeholder="Transaction ID / reference number" value={pay.ref} onChange={e => setPay({ ...pay, ref: e.target.value })} /></div>}
+        </div>
         {msg && <p className="err">{msg}</p>}<button className="btn big" disabled={busy}>{busy ? 'Placing…' : 'Place order · ' + rs(grand)}</button></form></>}</>);
   else if (view.v === 'orders') page = (<>{back('My Orders')}{orders === null ? <p className="muted">Loading…</p> : !orders.length ? <div className="empty"><div>🧾</div><p>No orders yet</p><button className="btn" onClick={() => nav('categories')}>Order now</button></div> :
     orders.map(o => <div key={o._id} className="ocard"><div className="oh"><b>Order #{o._id.slice(-5).toUpperCase()}</b><span className="chip2" data-s={o.status}>{o.status}</span></div><small>{new Date(o.createdAt).toLocaleString()}</small>

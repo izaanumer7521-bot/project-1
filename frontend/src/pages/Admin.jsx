@@ -12,13 +12,61 @@ function ImageInput({ value, onChange, max = 800 }) {
   return (<div className="imgin">{value && <img src={value} alt="" />}<input type="file" accept="image/*" onChange={pick} />
     <input placeholder="…or paste an image link" value={value && !value.startsWith('data:') ? value : ''} onChange={e => onChange(e.target.value)} />{value && <button type="button" onClick={() => onChange('')}>Remove image</button>}</div>);
 }
+const rs = n => 'Rs ' + Number(n || 0).toLocaleString('en-US');
+const PAY = { cod: 'Cash on Delivery', advance: 'Advance payment' };
+const dt = d => new Date(d).toLocaleString('en-GB', { timeZone: 'Asia/Karachi', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+function Dashboard() {
+  const [range, setRange] = useState('30d'), [d, setD] = useState(null), [err, setErr] = useState('');
+  useEffect(() => { setD(null); setErr(''); api('admin/stats?range=' + range).then(setD).catch(x => setErr(x.message)); }, [range]);
+  const max = d ? Math.max(1, ...d.series.map(x => x.revenue)) : 1, st = d?.status || {}, label = x => new Date(x + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return (<div className="dash"><div className="rangebar">{[['today', 'Today'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']].map(([k, n]) => <button key={k} className={range === k ? 'on' : ''} onClick={() => setRange(k)}>{n}</button>)}</div>
+    {err && <p className="err">{err}</p>}{!d && !err && <p>Loading…</p>}
+    {d && <><div className="stats">
+      <div className="stat"><small>Total orders</small><b>{d.orders}</b><em>{st.New || 0} new · {st.Cancelled || 0} cancelled (not counted)</em></div>
+      <div className="stat g"><small>Total money generated</small><b>{rs(d.revenue)}</b><em>From delivered orders: {rs(d.delivered.revenue)}</em></div>
+      <div className="stat o"><small>Delivery fee earned</small><b>{rs(d.delivery)}</b><em>From delivered orders: {rs(d.delivered.delivery)}</em></div>
+      <div className="stat"><small>Products sold (without delivery fee)</small><b>{rs(d.goods)}</b></div>
+      <div className="stat"><small>Average order</small><b>{rs(d.avgOrder)}</b></div>
+      <div className="stat"><small>Customers</small><b>{d.customers}</b><em>{d.newCustomers} new in this period</em></div></div>
+      <div className="card"><h3>Sales per day</h3>{d.series.length ? <><div className="bars">{d.series.map(x => <div key={x.day} className="bar" title={`${label(x.day)}: ${x.orders} orders · ${rs(x.revenue)} (delivery ${rs(x.delivery)})`}><div className="col" style={{ height: (x.revenue / max * 100) + '%' }}><i style={{ flex: x.delivery }} /><i className="gd" style={{ flex: Math.max(0, x.revenue - x.delivery) }} /></div></div>)}</div>
+        <div className="axis"><span>{label(d.series[0].day)}</span><span>{label(d.series[d.series.length - 1].day)}</span></div>
+        <p className="legend"><span className="k gd" /> Products <span className="k" /> Delivery fee · hover a bar for the exact numbers</p></> : <p>No sales in this period yet.</p>}</div>
+      <div className="two3"><div className="card"><h3>Orders by status</h3>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(k => <div key={k} className="row2"><span>{k}</span><b>{st[k] || 0}</b></div>)}</div>
+        <div className="card"><h3>Payments</h3>{d.payments.length ? d.payments.map(x => <div key={x.method} className="row2"><span>{PAY[x.method] || x.method}<small> · {x.count} orders{x.method === 'advance' ? `, ${x.paid} marked paid` : ''}</small></span><b>{rs(x.total)}</b></div>) : <p>No orders yet.</p>}</div>
+        <div className="card"><h3>Top products</h3>{d.topProducts.length ? d.topProducts.map(x => <div key={x.name} className="row2"><span>{x.name}<small> · {x.qty} sold</small></span><b>{rs(x.money)}</b></div>) : <p>No orders yet.</p>}</div></div></>}</div>);
+}
+const FL = { name: 'Name', phone: 'Phone', address: 'Address', note: 'Note', lat: 'Latitude', lng: 'Longitude', items: 'Items', delivery: 'Delivery charges', subtotal: 'Subtotal', total: 'Total', status: 'Status', paymentMethod: 'Payment method', paymentStatus: 'Payment status', paymentRef: 'Transaction ID', paymentAccount: 'Paid to', deliveryFee: 'Delivery fee', codEnabled: 'Cash on Delivery on', advanceEnabled: 'Advance payment on', paymentAccounts: 'Bank / e-wallet accounts', codNote: 'Cash on Delivery note', advanceNote: 'Advance payment instructions' };
+const fl = k => FL[k] || k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+function Logs() {
+  const [d, setD] = useState(null), [page, setPage] = useState(1), [ent, setEnt] = useState(''), [err, setErr] = useState('');
+  useEffect(() => { setErr(''); api(`logs?page=${page}${ent ? '&entity=' + ent : ''}`).then(setD).catch(x => setErr(x.message)); }, [page, ent]);
+  return (<div><select className="filt" value={ent} onChange={e => { setEnt(e.target.value); setPage(1); }}><option value="">All changes</option>{['Order', 'Customer', 'Product', 'Banner', 'Category', 'Review', 'Settings', 'Account'].map(x => <option key={x}>{x}</option>)}</select>
+    {err && <p className="err">{err}</p>}{!d && !err && <p>Loading…</p>}
+    {d && <><div className="list">{d.rows.map(l => <div key={l._id} className="card logrow"><div className="lh"><b>{l.summary}</b><small>{dt(l.createdAt)} · by {l.actor}</small></div>
+      {l.changes?.map((c, k) => <div key={k} className="chg"><span>{fl(c.field)}</span><s>{c.field === 'paymentMethod' ? PAY[c.from] || c.from : c.from}</s><em>→</em><u>{c.field === 'paymentMethod' ? PAY[c.to] || c.to : c.to}</u></div>)}</div>)}{!d.rows.length && <p>No activity recorded yet. Changes you make from now on will show here.</p>}</div>
+      {d.pages > 1 && <div className="pager"><button disabled={page <= 1} onClick={() => setPage(page - 1)}>← Newer</button><span>Page {d.page} of {d.pages}</span><button disabled={page >= d.pages} onClick={() => setPage(page + 1)}>Older →</button></div>}</>}</div>);
+}
 const SET = [['area', 'Delivering to (area)'], ['deliveryTitle', 'Delivery headline (e.g. Delivery: Today)'], ['deliverySub', 'Delivery sub-text'], ['phone1', 'Phone / WhatsApp 1'], ['phone2', 'Phone 2'], ['hours', 'Opening hours'], ['deliveryFee', 'Delivery charges (Rs)'], ['helpText', 'Help Center text', 'area'], ['aboutUs', 'About Us text', 'area'], ['privacy', 'Privacy Policy text', 'area'], ['terms', 'Terms & Conditions text', 'area']];
 function Settings() {
   const [f, setF] = useState(null), [m, setM] = useState(''); useEffect(() => { api('settings').then(setF); }, []);
   const save = async e => { e.preventDefault(); try { setF(await api('settings', 'PUT', f)); setM('Saved. The app shows the new settings now.'); } catch (x) { setM(x.message); } };
   const test = async () => { setM('Sending test message…'); try { const d = await api('orders/test-whatsapp', 'POST'); setM(d.ok ? '✅ Test message sent. Check your WhatsApp now.' : '❌ Failed: ' + d.reason); } catch (x) { setM(x.message); } };
   if (!f) return <p>Loading…</p>;
-  return (<form className="card narrow" onSubmit={save}><h3>App settings</h3>{SET.map(([k, l, t]) => <label key={k}>{l}{t === 'area' ? <textarea rows="4" value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} /> : <input value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} />}</label>)}
+  return (<form className="card narrow wide" onSubmit={save}><h3>App settings</h3>{SET.map(([k, l, t]) => <label key={k}>{l}{t === 'area' ? <textarea rows="4" value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} /> : <input value={f[k] || ''} onChange={e => setF({ ...f, [k]: e.target.value })} />}</label>)}
+    <h3 className="sub">Payment methods at checkout</h3>
+    <label>Cash on Delivery<input type="checkbox" checked={f.codEnabled !== false} onChange={e => setF({ ...f, codEnabled: e.target.checked })} /></label>
+    <label>Cash on Delivery note (optional, shown to customer)<input value={f.codNote || ''} onChange={e => setF({ ...f, codNote: e.target.value })} /></label>
+    <label>Advance payment (customer pays first by bank / e-wallet)<input type="checkbox" checked={!!f.advanceEnabled} onChange={e => setF({ ...f, advanceEnabled: e.target.checked })} /></label>
+    <label>Instructions for advance payment<textarea rows="3" placeholder="e.g. Send the full amount, then enter the transaction ID at checkout." value={f.advanceNote || ''} onChange={e => setF({ ...f, advanceNote: e.target.value })} /></label>
+    <p className="muted2">Your accounts (customers see these when they choose Advance payment):</p>
+    {(f.paymentAccounts || []).map((a, k) => { const ch = p => setF({ ...f, paymentAccounts: f.paymentAccounts.map((x, j) => j === k ? { ...x, ...p } : x) }); return (<div key={k} className="acct">
+      <select value={a.kind || 'bank'} onChange={e => ch({ kind: e.target.value })}><option value="bank">Bank account</option><option value="ewallet">E-wallet</option></select>
+      <input placeholder={a.kind === 'ewallet' ? 'Wallet name (Easypaisa, JazzCash…)' : 'Bank name (HBL, Meezan…)'} value={a.provider || ''} onChange={e => ch({ provider: e.target.value })} />
+      <input placeholder="Account title (name)" value={a.accountTitle || ''} onChange={e => ch({ accountTitle: e.target.value })} />
+      <input placeholder={a.kind === 'ewallet' ? 'Wallet number' : 'Account number / IBAN'} value={a.accountNumber || ''} onChange={e => ch({ accountNumber: e.target.value })} />
+      <input placeholder="Extra note (optional, e.g. branch)" value={a.note || ''} onChange={e => ch({ note: e.target.value })} />
+      <button type="button" onClick={() => setF({ ...f, paymentAccounts: f.paymentAccounts.filter((_, j) => j !== k) })}>Remove this account</button></div>); })}
+    <button type="button" className="btn ghost" onClick={() => setF({ ...f, paymentAccounts: [...(f.paymentAccounts || []), { kind: 'bank', provider: '', accountTitle: '', accountNumber: '', note: '' }] })}>+ Add bank / e-wallet</button>
     {m && <p className="err">{m}</p>}<button className="btn">Save settings</button><button type="button" className="btn ghost" onClick={test}>Send test WhatsApp message</button></form>);
 }
 function Crud({ path }) {
@@ -37,18 +85,43 @@ function Crud({ path }) {
       <div><button onClick={() => setF(r)}>Edit</button><button onClick={async () => { if (confirm('Delete this item?')) { await api(`${path}/${r._id}`, 'DELETE'); load(); } }}>Delete</button></div></div>)}
       {!rows.length && <p>Nothing here yet. Add your first one.</p>}</div></div>);
 }
+function OrderEditor({ o, onDone }) {
+  const [f, setF] = useState({ name: o.name || '', phone: o.phone || '', address: o.address || '', note: o.note || '', lat: o.lat ?? '', lng: o.lng ?? '', status: o.status || 'New', paymentMethod: o.paymentMethod || 'cod', paymentStatus: o.paymentStatus || 'Unpaid', paymentRef: o.paymentRef || '', paymentAccount: o.paymentAccount || '', items: o.items.map(i => ({ name: i.name, price: i.price, qty: i.qty })), delivery: o.delivery ?? 0, total: o.total ?? 0 }), [err, setErr] = useState(''), [busy, setBusy] = useState(false);
+  const sum = it => it.reduce((x, i) => x + (Number(i.price) || 0) * (Number(i.qty) || 0), 0), sub = sum(f.items);
+  const up = p => setF(x => { const n = { ...x, ...p }; if (!('total' in p)) n.total = sum(n.items) + (Number(n.delivery) || 0); return n; });
+  const item = (k, p) => up({ items: f.items.map((i, j) => j === k ? { ...i, ...p } : i) }), inp = (k, l, t) => <label>{l}<input type={t || 'text'} value={f[k]} onChange={e => up({ [k]: e.target.value })} /></label>;
+  const save = async e => { e.preventDefault(); setBusy(true); setErr(''); try { await api('orders/' + o._id, 'PUT', { ...f, delivery: Number(f.delivery), total: Number(f.total), items: f.items.map(i => ({ ...i, price: Number(i.price), qty: Number(i.qty) })) }); onDone(true); } catch (x) { setErr(x.message); } setBusy(false); };
+  return (<form className="oedit" onSubmit={save}><h4>Edit order #{o._id.slice(-5).toUpperCase()}</h4>
+    <div className="g2">{inp('name', 'Customer name')}{inp('phone', 'Phone')}</div>{inp('address', 'Address')}{inp('note', 'Note')}
+    <div className="g2">{inp('lat', 'Location latitude', 'number')}{inp('lng', 'Location longitude', 'number')}</div>
+    {f.lat !== '' && f.lng !== '' && <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${f.lat},${f.lng}`}>Open this location in Google Maps</a>}
+    <b className="lbl">Items</b>{f.items.map((i, k) => <div key={k} className="irow"><input placeholder="Item" value={i.name} onChange={e => item(k, { name: e.target.value })} /><input type="number" min="0" step="any" placeholder="Price" value={i.price} onChange={e => item(k, { price: e.target.value })} /><input type="number" min="1" placeholder="Qty" value={i.qty} onChange={e => item(k, { qty: e.target.value })} /><button type="button" disabled={f.items.length < 2} onClick={() => up({ items: f.items.filter((_, j) => j !== k) })}>✕</button></div>)}
+    <button type="button" className="mini" onClick={() => up({ items: [...f.items, { name: '', price: 0, qty: 1 }] })}>+ Add item</button>
+    <div className="g2"><label>Items subtotal<input value={rs(sub)} readOnly /></label>{inp('delivery', 'Delivery charges (Rs)', 'number')}</div>
+    <label>Total (auto-calculated; you can overwrite it, e.g. for a discount)<input type="number" min="0" step="any" value={f.total} onChange={e => up({ total: e.target.value })} /></label>
+    <div className="g2"><label>Order status<select value={f.status} onChange={e => up({ status: e.target.value })}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(x => <option key={x}>{x}</option>)}</select></label>
+      <label>Payment method<select value={f.paymentMethod} onChange={e => up({ paymentMethod: e.target.value })}><option value="cod">Cash on Delivery</option><option value="advance">Advance payment</option></select></label></div>
+    <div className="g2"><label>Payment status<select value={f.paymentStatus} onChange={e => up({ paymentStatus: e.target.value })}><option>Unpaid</option><option>Paid</option></select></label>{inp('paymentRef', 'Transaction ID')}</div>
+    {inp('paymentAccount', 'Paid to (account)')}
+    {err && <p className="err">{err}</p>}<div className="row"><button className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save order'}</button><button type="button" className="btn ghost" onClick={() => onDone(false)}>Cancel</button></div></form>);
+}
 function Orders() {
-  const [rows, setRows] = useState([]); const load = () => api('orders').then(setRows); useEffect(() => { load(); }, []);
-  return (<div className="list">{rows.map(o => <div key={o._id} className="card"><b>{o.name} · {o.phone}</b><p>{o.address}{o.note && ` (${o.note})`}</p>
-    <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>Rs {o.total}</b>{o.delivery != null && <small> (incl. Rs {o.delivery} delivery)</small>}</p>
+  const [rows, setRows] = useState([]), [edit, setEdit] = useState(null); const load = () => api('orders').then(setRows); useEffect(() => { load(); }, []);
+  return (<div className="list">{rows.map(o => <div key={o._id} className="card"><b>{o.name} · {o.phone}</b><small className="when">#{o._id.slice(-5).toUpperCase()} · {dt(o.createdAt)}</small><p>{o.address}{o.note && ` (${o.note})`}{o.lat != null && o.lng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${o.lat},${o.lng}`}>map</a></>}</p>
+    <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>{rs(o.total)}</b>{o.delivery != null && <small> (incl. {rs(o.delivery)} delivery)</small>}</p>
+    <p><span className={'pill ' + (o.paymentStatus === 'Paid' ? 'ok' : o.paymentMethod === 'advance' ? 'warn' : '')}>{PAY[o.paymentMethod || 'cod']} · {o.paymentStatus || 'Unpaid'}</span>{o.paymentRef && <small> TID: {o.paymentRef}{o.paymentAccount && ' → ' + o.paymentAccount}</small>}</p>
     <p><small>WhatsApp: {o.notified ? '✅ sent' : '❌ not sent' + (o.notifyError ? ' – ' + o.notifyError : '')}</small></p>
-    {!o.notified && <button onClick={async () => { const d = await api(`orders/${o._id}/notify`, 'POST'); alert(d.ok ? 'Sent to WhatsApp' : 'Failed: ' + d.reason); load(); }}>Resend to WhatsApp</button>}
-    <select value={o.status} onChange={async e => { await api('orders/' + o._id, 'PUT', { status: e.target.value }); load(); }}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(s => <option key={s}>{s}</option>)}</select>
-    <button onClick={async () => { await api('orders/' + o._id, 'DELETE'); load(); }}>Delete</button></div>)}{!rows.length && <p>No orders yet.</p>}</div>);
+    {edit === o._id ? <OrderEditor o={o} onDone={ch => { setEdit(null); ch && load(); }} /> : <>
+      {!o.notified && <button onClick={async () => { const d = await api(`orders/${o._id}/notify`, 'POST'); alert(d.ok ? 'Sent to WhatsApp' : 'Failed: ' + d.reason); load(); }}>Resend to WhatsApp</button>}
+      <button onClick={() => setEdit(o._id)}>Edit order</button>
+      {o.paymentStatus !== 'Paid' && <button onClick={async () => { await api('orders/' + o._id, 'PUT', { paymentStatus: 'Paid' }); load(); }}>Mark as paid</button>}
+      <select value={o.status} onChange={async e => { await api('orders/' + o._id, 'PUT', { status: e.target.value }); load(); }}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(s => <option key={s}>{s}</option>)}</select>
+      <button onClick={async () => { if (confirm('Delete this order? This cannot be undone.')) { await api('orders/' + o._id, 'DELETE'); load(); } }}>Delete</button></>}</div>)}{!rows.length && <p>No orders yet.</p>}</div>);
 }
 function Customers() {
-  const [rows, setRows] = useState([]); useEffect(() => { api('customers').then(setRows); }, []);
-  return (<div className="list">{rows.map(c => <div key={c._id} className="li"><b>{c.phone}</b><small>{new Date(c.createdAt).toLocaleString()}</small></div>)}{!rows.length && <p>No signups yet.</p>}</div>);
+  const [rows, setRows] = useState([]), [err, setErr] = useState(''); const load = () => api('customers').then(setRows); useEffect(() => { load(); }, []);
+  return (<div className="list">{err && <p className="err">{err}</p>}{rows.map(c => <div key={c._id} className="li"><div><b>{c.phone}{(c.name || c.firstName) && ' · ' + (c.name || c.firstName)}</b>{(c.street || c.email) && <small>{[c.street, c.email].filter(Boolean).join(' · ')}</small>}<small>Joined {dt(c.createdAt)}</small></div>
+    <div><button onClick={async () => { if (confirm(`Delete customer ${c.phone}? Their past orders stay in Orders.`)) { try { await api('customers/' + c._id, 'DELETE'); load(); } catch (x) { setErr(x.message); } } }}>Delete</button></div></div>)}{!rows.length && <p>No signups yet.</p>}</div>);
 }
 function Account({ email, setEmail }) {
   const [f, setF] = useState({ currentPassword: '', email, newPassword: '' }), [m, setM] = useState('');
@@ -60,7 +133,7 @@ function Account({ email, setEmail }) {
     {m && <p className="err">{m}</p>}<button className="btn">Save changes</button></form>);
 }
 export default function Admin() {
-  const [email, setEmail] = useState(null), [tab, setTab] = useState('orders'), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
+  const [email, setEmail] = useState(null), [tab, setTab] = useState('dashboard'), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
   useEffect(() => { localStorage.getItem('bd_token') && api('admin/me').then(d => setEmail(d.email)).catch(() => localStorage.removeItem('bd_token')); }, []);
   const login = async e => { e.preventDefault(); try { const d = await api('admin/login', 'POST', f); localStorage.setItem('bd_token', d.token); setEmail(d.email); } catch (x) { setErr(x.message); } };
   if (!email) return (<div className="loginpage"><form className="login" onSubmit={login}><Logo /><h2>Admin sign in</h2>
@@ -68,7 +141,7 @@ export default function Admin() {
     <input type="password" required placeholder="Password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} />
     {err && <p className="err">{err}</p>}<button className="btn">Sign in</button></form></div>);
   return (<div className="adm"><aside><Logo small /><small>{email}</small>
-    {[['orders', 'Orders'], ['products', 'Products'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['settings', 'Settings'], ['account', 'Account']].map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
+    {[['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']].map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
     <button onClick={() => { localStorage.removeItem('bd_token'); setEmail(null); }}>Log out</button></aside>
-    <main><h2>{tab[0].toUpperCase() + tab.slice(1)}</h2>{tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
+    <main><h2>{tab === 'logs' ? 'Activity log' : tab[0].toUpperCase() + tab.slice(1)}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }

@@ -22,6 +22,8 @@ export const orderText = o => [
   `Subtotal: ${rs(o.subtotal)}`,
   `Delivery charges: ${rs(o.delivery)}`,
   `*TOTAL: ${rs(o.total)}*`,
+  '',
+  o.paymentMethod === 'advance' ? `*PAYMENT: Advance (already sent)*\n${o.paymentAccount ? 'Paid to: ' + o.paymentAccount + '\n' : ''}Transaction ID: ${o.paymentRef || '-'}\nPlease verify before confirming.` : '*PAYMENT: Cash on Delivery*',
 ].join('\n');
 
 const clean = t => String(t || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220);

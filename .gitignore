@@ -1,5 +1,8 @@
 node_modules
 dist
 
+ HEAD
 .vercel
 .env*
+.env.local
+ (Admin dashboard, order editing, activity log, payment options)

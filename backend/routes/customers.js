@@ -1,4 +1,4 @@
-import { Router } from 'express'; import jwt from 'jsonwebtoken'; import { Customer } from '../models/index.js'; import { auth, customerAuth, wrap } from '../middleware/auth.js';
+import { Router } from 'express'; import jwt from 'jsonwebtoken'; import { Customer } from '../models/index.js'; import { auth, customerAuth, wrap } from '../middleware/auth.js'; import { logAction } from '../utils/log.js';
 const r = Router();
 const norm = p => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('92')) d = d.slice(2); if (d.startsWith('0')) d = d.slice(1); return /^3\d{9}$/.test(d) ? '0' + d : null; };
 const token = c => jwt.sign({ id: c._id, role: 'customer' }, process.env.JWT_SECRET, { expiresIn: '90d' });
@@ -30,4 +30,8 @@ r.put('/me', customerAuth, wrap(async (q, s) => {
 }));
 
 r.get('/', auth, wrap(async (q, s) => s.json(await Customer.find().sort({ createdAt: -1 }))));
+r.delete('/:id', auth, wrap(async (q, s) => {
+  const c = await Customer.findByIdAndDelete(q.params.id); if (!c) return s.status(404).json({ error: 'Customer not found' });
+  await logAction(q, { entity: 'Customer', summary: `Deleted customer ${c.phone}${c.name ? ' (' + c.name + ')' : ''}` }); s.json({ ok: true });
+}));
 export default r;
