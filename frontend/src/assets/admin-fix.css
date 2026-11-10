@@ -10,8 +10,33 @@
 .oedit .mini:hover{background:color-mix(in srgb,var(--c1) 14%,var(--surface))}
 .oedit .row .btn.ghost,.oedit .btn.ghost{color:var(--c1);border-color:var(--c1)}
 /* small white buttons in admin lists */
-.adm .li button:not(.btn):not(.ebtn),.adm .card>button:not(.btn):not(.ebtn),.adm .imgin button,.adm .tabs button,.adm .dbtn,.adm .pager button,.adm .filt select,.adm .filt input{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.adm .li button:not(.btn):not(.ebtn):not(.dbtn),.adm .card>button:not(.btn):not(.ebtn):not(.dbtn),.adm .imgin button,.adm .tabs button,.adm .pager button,.adm .filt select,.adm .filt input{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
 .adm .tabs .on{background:var(--grad);color:#fff;border-color:transparent}
 .adm .maplink{color:var(--c2)}
 .adm .muted2,.adm .when,.adm .lt,.adm .k{color:var(--muted)}
 .adm .okmsg{color:var(--c1)}
+
+/* make sure the edit panel always wins over the old light rule */
+.adm .card .oedit,.adm form.oedit{background:var(--soft)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
+.adm .card .oedit label,.adm .card .oedit .lbl,.adm .card .oedit h4{color:var(--ink)!important}
+.adm .card .oedit label{color:var(--muted)!important}
+/* order payment pills (e.g. "Cash on Delivery · Unpaid") */
+.pill{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.pill.ok{background:color-mix(in srgb,#00c27a 20%,var(--surface));color:#00a86b;border-color:#00c27a55}
+.pill.warn{background:color-mix(in srgb,#ff8a3d 20%,var(--surface));color:#ff8a3d;border-color:#ff8a3d55}
+.adm .card>select,.adm .card>button:not(.btn){color:var(--ink)}
+.adm .card>.ebtn{color:var(--c1)}.adm .card>.dbtn{color:#ff5a5f}
+.adm .card .when,.adm .card small{color:var(--muted)}
+.rangebar button,.adm .acct button{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.rangebar .on{background:var(--grad);color:#fff;border-color:transparent}
+.adm .stat{border-top-color:var(--c1)}
+.adm .bar .col{background:var(--soft)}
+/* customer side: payment options, location box, profile sheet, receipt total */
+.payopt{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.payopt.on{background:color-mix(in srgb,var(--c1) 14%,var(--surface));border-color:var(--c1)}
+.payacct{background:color-mix(in srgb,#ff8a3d 12%,var(--surface));color:var(--ink);border-color:#ff8a3d88}
+.acrow button{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.locbox{background:var(--soft);color:var(--ink);border-color:var(--line)}.locbox.on{background:color-mix(in srgb,var(--c1) 14%,var(--surface));border-color:var(--c1)}
+.psheet{background:var(--surface);color:var(--ink)}.psheet .x{background:var(--soft);color:var(--ink)}
+.psheet input:not([type=checkbox]),.psheet input:focus{background:var(--soft);color:var(--ink);border-color:var(--line)}
+.rc-sec.tot{background:var(--soft)}
