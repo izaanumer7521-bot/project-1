@@ -40,3 +40,15 @@
 .psheet{background:var(--surface);color:var(--ink)}.psheet .x{background:var(--soft);color:var(--ink)}
 .psheet input:not([type=checkbox]),.psheet input:focus{background:var(--soft);color:var(--ink);border-color:var(--line)}
 .rc-sec.tot{background:var(--soft)}
+
+/* ===== order editor: pick items from our store ===== */
+.oedit .addbar{display:flex;flex-wrap:wrap;gap:8px}
+.oedit .pickbox{margin-top:10px;border:1.5px solid var(--c1);border-radius:16px;padding:10px;background:var(--surface)}
+.oedit .pickbox>input{width:100%;margin:0 0 8px}
+.oedit .pickl{max-height:290px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.oedit .pickit{display:grid;grid-template-columns:42px 1fr auto auto;gap:10px;align-items:center;text-align:left;width:100%;padding:6px 10px 6px 6px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer;font:inherit}
+.oedit .pickit:hover{border-color:var(--c1);box-shadow:0 0 12px #00c27a55}
+.oedit .pickit img,.oedit .pickit em{width:42px;height:42px;border-radius:10px;object-fit:cover;display:grid;place-items:center;font-style:normal;font-weight:800;background:var(--surface);color:var(--c1)}
+.oedit .pickit span{min-width:0}.oedit .pickit b{display:block;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.oedit .pickit small{color:var(--muted);font-size:.74rem}
+.oedit .pickit strong{font-size:.85rem;color:var(--c1)}
+.oedit .pickit i{font-style:normal;font-weight:800;font-size:.78rem;background:var(--grad);color:#fff;border-radius:999px;padding:2px 8px}
