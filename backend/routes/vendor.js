@@ -13,10 +13,13 @@ function clean(b, full) {
   if (full || 'price' in b) { u.price = num(b.price); if (u.price == null) return { error: 'Enter a valid price' }; }
   if ('oldPrice' in b) { if (b.oldPrice === '' || b.oldPrice == null) u.oldPrice = null; else { u.oldPrice = num(b.oldPrice); if (u.oldPrice == null) return { error: 'Old price must be a number' }; } }
   if ('unit' in b) u.unit = t(b.unit, 40); if ('description' in b) u.description = t(b.description, 500); if ('image' in b) u.image = t(b.image, 3e6);
+  if ('section' in b) u.section = t(b.section, 40);
   if ('available' in b) u.available = !!b.available;
   return u;
 }
 const mine = q => ({ shopId: q.vendor.shopId });
+// Reuse the spelling of an existing section of this shop (so "burger" and "Burger" become one chip)
+const fixSection = async (q, u) => { if (u.section) { const ex = (await Product.distinct('section', mine(q))).find(x => x && x.toLowerCase() === u.section.toLowerCase()); if (ex) u.section = ex; } };
 // Orders that contain this shop's products. A vendor only ever sees ITS OWN lines and the amount for them:
 // no other shop's items, no order total, no delivery charges, and no customer phone or address.
 r.get('/orders', wrap(async (q, s) => {
@@ -27,7 +30,7 @@ r.get('/products', wrap(async (q, s) => s.json(await Product.find(mine(q)).sort(
 r.post('/products', wrap(async (q, s) => {
   const u = clean(q.body, true); if (u.error) return bad(s, u.error);
   if (!(await Category.exists({ key: u.category }))) return bad(s, 'Unknown category');
-  const p = await Product.create({ available: true, ...u, shopId: q.vendor.shopId });
+  await fixSection(q, u); const p = await Product.create({ available: true, ...u, shopId: q.vendor.shopId });
   await logAction(q, { entity: 'Product', summary: `Vendor "${q.vendor.shopName}" added product "${p.name}"` }); s.json(p);
 }));
 r.put('/products/:id', wrap(async (q, s) => {
@@ -35,7 +38,7 @@ r.put('/products/:id', wrap(async (q, s) => {
   const old = await Product.findOne({ _id: q.params.id, ...mine(q) }); if (!old) return bad(s, 'Product not found in your shop', 404);
   const u = clean(q.body, false); if (u.error) return bad(s, u.error);
   if (u.category && !(await Category.exists({ key: u.category }))) return bad(s, 'Unknown category');
-  const p = await Product.findOneAndUpdate({ _id: q.params.id, ...mine(q) }, { $set: u }, { new: true }); if (!p) return bad(s, 'Product not found in your shop', 404);
+  await fixSection(q, u); const p = await Product.findOneAndUpdate({ _id: q.params.id, ...mine(q) }, { $set: u }, { new: true }); if (!p) return bad(s, 'Product not found in your shop', 404);
   const changes = diff(old.toObject(), p.toObject(), Object.keys(u)); if (changes.length) await logAction(q, { entity: 'Product', summary: `Vendor "${q.vendor.shopName}" edited product "${p.name}"`, changes });
   s.json(p);
 }));

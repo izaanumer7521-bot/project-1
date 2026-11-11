@@ -12,7 +12,7 @@ const Thumb = ({ item }) => <div className="thumb">{item.image ? <img src={item.
 
 export default function Home() {
   const [banners, setB] = useState([]), [products, setP] = useState([]), [reviews, setR] = useState([]), [cats, setC] = useState([]), [shops, setShops] = useState([]), [S, setS] = useState(DEF);
-  const [view, setView] = useState({ v: 'home' }), [q, setQ] = useState(''), [sOpen, setSOpen] = useState(false), [cq, setCq] = useState(''), [toast, setToast] = useState('');
+  const [view, setView] = useState({ v: 'home' }), [q, setQ] = useState(''), [sOpen, setSOpen] = useState(false), [sec, setSec] = useState('all'), [cq, setCq] = useState(''), [toast, setToast] = useState('');
   const [cart, setCart] = useState(() => jget('bd_cart', {})), [user, setUser] = useState(localStorage.getItem('bd_user')), [orders, setOrders] = useState(null), [placed, setPlaced] = useState(null);
   const [f, setF] = useState({ name: '', address: '', note: '' }), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false), [pay, setPay] = useState({ method: '', ref: '', account: '' });
   const [show, setShow] = useState(!sessionStorage.getItem('bd_splash')), [authOpen, setAuthOpen] = useState(false), [help, setHelp] = useState(false), [inst, setInst] = useState(null);
@@ -41,7 +41,7 @@ export default function Home() {
 
   const list = cats.length ? cats : CATS.map(([key, emoji, name]) => ({ key, emoji, name }));
   const emojiOf = k => list.find(c => c.key === k)?.emoji;
-  const nav = (v, extra = {}) => { setSOpen(false); const s = { v, ...extra }; history.pushState(s, ''); setView(s); scrollTo(0, 0); };
+  const nav = (v, extra = {}) => { setSOpen(false); setSec('all'); const s = { v, ...extra }; history.pushState(s, ''); setView(s); scrollTo(0, 0); };
   const items = Object.values(cart), count = items.reduce((s, i) => s + i.qty, 0), total = items.reduce((s, i) => s + i.qty * i.price, 0), fee = Number(S.deliveryFee ?? 100), grand = total + fee;
   const accts = (S.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!S.advanceEnabled && accts.length > 0, codOn = S.codEnabled !== false || !advOn, rOn = S.riderOnlineEnabled !== false, method = pay.method === 'advance' && advOn ? 'advance' : pay.method === 'rider_online' && rOn ? 'rider_online' : pay.method === 'cod' && codOn ? 'cod' : codOn ? 'cod' : rOn ? 'rider_online' : 'advance';
   const copy = t => { try { navigator.clipboard.writeText(t); setMsg(''); } catch {} };
@@ -100,10 +100,13 @@ export default function Home() {
       {!!reviews.length && section('What customers say', '', null, <div className="hscroll">{reviews.map(r => <blockquote key={r._id}><div className="stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div><p>{r.text}</p><cite>{r.name}</cite></blockquote>)}</div>)}
       <div className="contact"><b>Need help? Talk to us</b><a href={`tel:${S.phone1}`}>📞 {S.phone1}</a><a href={`tel:${S.phone2}`}>📞 {S.phone2}</a><a className="cwa" href={waLink(S.phone1, 'Hello ByDoor!')} target="_blank" rel="noopener noreferrer"><WaIcon size={18} /> Chat on WhatsApp</a><small>{S.hours} · {S.area}</small></div></>}
   </>);
-  else if (view.v === 'shop') { const x = shopsWith.find(y => String(y._id) === String(view.s)), groups = x ? list.map(c => [c, x.items.filter(p => p.category === c.key)]).filter(g => g[1].length) : [], other = x ? x.items.filter(p => !list.some(c => c.key === p.category)) : [];
+  else if (view.v === 'shop') { const x = shopsWith.find(y => String(y._id) === String(view.s)), groups = x ? list.map(c => [c, x.items.filter(p => p.category === c.key)]).filter(g => g[1].length) : [], other = x ? x.items.filter(p => !list.some(c => c.key === p.category)) : [],
+      secOf = p => (p.section || '').trim() || 'Other', secs = x ? [...new Set(x.items.map(p => (p.section || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)) : [], chips = secs.length ? [...secs, ...(x.items.some(p => !(p.section || '').trim()) ? ['Other'] : [])] : [],
+      secGroups = (sec === 'all' || !chips.includes(sec) ? chips : [sec]).map(n => [n, x.items.filter(p => secOf(p) === n)]).filter(g => g[1].length);
     page = (<>{back(x?.name || 'Store')}{x ? <><div className="shophead">{av(x, 'lg')}<div><h3>{x.name}</h3><small>{x.items.length} item{x.items.length === 1 ? '' : 's'} · {S.area}</small></div></div>
-      {groups.map(([c, ps]) => <section key={c.key} className="menucat"><div className="sh"><h3>{c.emoji} {c.name}</h3><span className="cnt">{ps.length}</span></div><div className="pgrid">{ps.map(p => pcard(p))}</div></section>)}
-      {!!other.length && <div className="pgrid">{other.map(p => pcard(p))}</div>}
+      {chips.length > 0 && <div className="secbar" role="tablist">{['all', ...chips].map(n => <button key={n} type="button" className={sec === n || (n === 'all' && !chips.includes(sec)) ? 'on' : ''} onClick={() => setSec(n)}>{n === 'all' ? 'All' : n}</button>)}</div>}
+      {chips.length ? secGroups.map(([n, ps]) => <section key={n} className="menucat"><div className="sh"><h3>{n}</h3><span className="cnt">{ps.length}</span></div><div className="pgrid">{ps.map(p => pcard(p))}</div></section>) : <>{groups.map(([c, ps]) => <section key={c.key} className="menucat"><div className="sh"><h3>{c.emoji} {c.name}</h3><span className="cnt">{ps.length}</span></div><div className="pgrid">{ps.map(p => pcard(p))}</div></section>)}
+      {!!other.length && <div className="pgrid">{other.map(p => pcard(p))}</div>}</>}
       {!x.items.length && <p className="muted">This store has not added its menu yet.</p>}</> : <p className="muted">Loading store…</p>}</>); }
   else if (view.v === 'categories') { const ls = list.filter(c => c.name.toLowerCase().includes(cq.toLowerCase()));
     page = (<>{back('All Categories')}<div className="search"><span>🔍</span><input placeholder="Search categories…" value={cq} onChange={e => setCq(e.target.value)} /></div><div className="cgrid">{ls.map(c => catCard(c, 'gcat'))}</div></>); }
