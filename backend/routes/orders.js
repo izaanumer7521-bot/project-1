@@ -13,7 +13,11 @@ r.post('/', wrap(async (q, s) => {
     // Products with sizes (Half/Full, Small/Large, scoops…): the customer must pick one, and its price comes from the database
     const opts = p.options || []; let opt = null;
     if (opts.length) { opt = opts.find(o => o.label === String(i?.option ?? '')); if (!opt) return s.status(400).json({ error: `Please choose a size for "${p.name}".` }); }
-    lines.push({ name: opt ? `${p.name} (${opt.label})` : p.name, price: opt ? opt.price : p.price, qty, shopId: p.shopId || '', ...(opt && { option: opt.label }) });
+    // Products with flavours (ice cream etc.): the customer must pick one of the flavours the shop listed
+    const fls = p.flavors || []; let flavor = '';
+    if (fls.length) { flavor = fls.find(f => f === String(i?.flavor ?? '')) || ''; if (!flavor) return s.status(400).json({ error: `Please choose a flavour for \"${p.name}\".` }); }
+    const tag = [opt?.label, flavor].filter(Boolean).join(', ');
+    lines.push({ name: tag ? `${p.name} (${tag})` : p.name, price: opt ? opt.price : p.price, qty, shopId: p.shopId || '', ...(opt && { option: opt.label }), ...(flavor && { flavor }) });
   }
   const subtotal = lines.reduce((x, i) => x + i.price * i.qty, 0), fee = Number((await Setting.findOne())?.deliveryFee ?? 100), delivery = Number.isFinite(fee) && fee >= 0 ? fee : 100;
   const lat = Number(q.body.lat), lng = Number(q.body.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
@@ -41,7 +45,7 @@ r.put('/:id', auth, wrap(async (q, s) => {
   for (const k of ['lat', 'lng']) if (k in b) { if (b[k] === '' || b[k] == null) u[k] = undefined; else { const n = Number(b[k]); if (!Number.isFinite(n)) return bad('Location must be numbers'); u[k] = n; } }
   if ('items' in b) {
     if (!Array.isArray(b.items) || !b.items.length) return bad('An order needs at least one item');
-    u.items = []; for (const i of b.items) { const name = t(i?.name, 120), price = money(i?.price), qty = Math.floor(Number(i?.qty)); if (!name || price == null || !(qty >= 1 && qty <= 999)) return bad('Each item needs a name, a price and a quantity of 1 or more'); const shopId = t(i?.shopId, 40); u.items.push({ name, price, qty, ...(shopId && { shopId }), ...(t(i?.option, 40) && { option: t(i.option, 40) }) }); }
+    u.items = []; for (const i of b.items) { const name = t(i?.name, 120), price = money(i?.price), qty = Math.floor(Number(i?.qty)); if (!name || price == null || !(qty >= 1 && qty <= 999)) return bad('Each item needs a name, a price and a quantity of 1 or more'); const shopId = t(i?.shopId, 40); u.items.push({ name, price, qty, ...(shopId && { shopId }), ...(t(i?.option, 40) && { option: t(i.option, 40) }), ...(t(i?.flavor, 40) && { flavor: t(i.flavor, 40) }) }); }
   }
   const items = u.items || o.items; u.subtotal = items.reduce((x, i) => x + i.price * i.qty, 0);
   if ('delivery' in b) { const d = money(b.delivery); if (d == null) return bad('Delivery charges must be a number'); u.delivery = d; }

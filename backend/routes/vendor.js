@@ -12,6 +12,11 @@ export function cleanOptions(raw) {
     if (!label || ps === '' || ps == null || !Number.isFinite(price) || price < 0) return { error: 'Each size needs a name and a price' }; if (seen.has(label.toLowerCase())) return { error: 'Size names must be different' }; seen.add(label.toLowerCase()); list.push({ label, price }); }
   return { list: list.slice(0, 8) };
 }
+// Flavours (e.g. Mango, Vanilla): a simple list of names the customer can choose from. Duplicates and empty names are dropped.
+export function cleanFlavors(raw) {
+  const list = [], seen = new Set(); for (const x of Array.isArray(raw) ? raw : []) { const f = String(x ?? '').trim().slice(0, 40); if (!f || seen.has(f.toLowerCase())) continue; seen.add(f.toLowerCase()); list.push(f); }
+  return list.slice(0, 30);
+}
 function clean(b, full) {
   const u = {}, t = (v, n) => String(v ?? '').trim().slice(0, n), num = v => { const n = Number(v); return v !== '' && v != null && Number.isFinite(n) && n >= 0 ? n : null; };
   if (full || 'name' in b) { u.name = t(b.name, 120); if (!u.name) return { error: 'Product name is required' }; }
@@ -21,6 +26,7 @@ function clean(b, full) {
   if ('unit' in b) u.unit = t(b.unit, 40); if ('description' in b) u.description = t(b.description, 500); if ('image' in b) u.image = t(b.image, 3e6);
   if ('section' in b) u.section = t(b.section, 40);
   if ('options' in b) { const o = cleanOptions(b.options); if (o.error) return o; u.options = o.list; if (o.list.length) u.price = Math.min(...o.list.map(x => x.price)); }
+  if ('flavors' in b) u.flavors = cleanFlavors(b.flavors);
   if ('available' in b) u.available = !!b.available;
   return u;
 }

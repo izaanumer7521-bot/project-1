@@ -62,3 +62,8 @@
 .optrow input{margin:0!important}
 .optrow button{border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .optsed small{color:var(--muted);font-weight:400}
+
+/* product flavours editor */
+.flchips{display:flex;flex-wrap:wrap;gap:6px}
+.flchips span{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border-radius:999px;font-weight:700;font-size:.82rem;background:var(--grad);color:#fff}
+.flchips span button{border:0;border-radius:50%;width:20px;height:20px;line-height:20px;padding:0;cursor:pointer;background:#ffffff40;color:#fff;font-size:.7rem}

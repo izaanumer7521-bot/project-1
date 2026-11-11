@@ -60,3 +60,11 @@ html[data-theme=dark] .hero2 .search.hs{background:#0f1b26;color:#e9f5ef}
 .sizes button.on{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 4px 14px #18b5d855}
 .sizes button.on b{color:#fff}
 .szt{font-style:normal;margin-left:6px;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:800;color:#fff;background:var(--grad);vertical-align:middle}
+
+/* ===== flavour picker (ice cream etc.) ===== */
+.flavs{margin:6px 4px 2px}
+.flavs small{display:block;font-size:.7rem;font-weight:800;color:var(--muted);margin:0 2px 4px;text-transform:uppercase;letter-spacing:.04em}
+.flavs div{display:flex;gap:6px;flex-wrap:wrap}
+.flavs button{cursor:pointer;padding:5px 10px;border-radius:999px;font:inherit;font-size:.74rem;font-weight:700;line-height:1.2;background:var(--soft);color:var(--ink);border:1.5px solid var(--line);transition:.15s}
+.flavs button.on{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 4px 14px #18b5d855}
+.szt.flt{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
