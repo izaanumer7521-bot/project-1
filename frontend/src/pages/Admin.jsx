@@ -14,7 +14,7 @@ function ImageInput({ value, onChange, max = 800 }) {
     <input placeholder="…or paste an image link" value={value && !value.startsWith('data:') ? value : ''} onChange={e => onChange(e.target.value)} />{value && <button type="button" onClick={() => onChange('')}>Remove image</button>}</div>);
 }
 const rs = n => 'Rs ' + Number(n || 0).toLocaleString('en-US');
-const PAY = { cod: 'Cash on Delivery', advance: 'Advance payment' };
+const PAY = { cod: 'Cash on Delivery', advance: 'Advance payment', rider_online: 'Online payment to rider' };
 const dt = d => new Date(d).toLocaleString('en-GB', { timeZone: 'Asia/Karachi', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 function PushSetup() {
   const [st, setSt] = useState('loading'), [m, setM] = useState(''), [busy, setBusy] = useState(false); useEffect(() => { pushState().then(setSt); }, []);
@@ -45,7 +45,7 @@ function Dashboard() {
         <div className="card"><h3>Payments</h3>{d.payments.length ? d.payments.map(x => <div key={x.method} className="row2"><span>{PAY[x.method] || x.method}<small> · {x.count} orders{x.method === 'advance' ? `, ${x.paid} marked paid` : ''}</small></span><b>{rs(x.total)}</b></div>) : <p>No orders yet.</p>}</div>
         <div className="card"><h3>Top products</h3>{d.topProducts.length ? d.topProducts.map(x => <div key={x.name} className="row2"><span>{x.name}<small> · {x.qty} sold</small></span><b>{rs(x.money)}</b></div>) : <p>No orders yet.</p>}</div></div></>}</div>);
 }
-const FL = { name: 'Name', phone: 'Phone', address: 'Address', note: 'Note', lat: 'Latitude', lng: 'Longitude', items: 'Items', delivery: 'Delivery charges', subtotal: 'Subtotal', total: 'Total', status: 'Status', paymentMethod: 'Payment method', paymentStatus: 'Payment status', paymentRef: 'Transaction ID', paymentAccount: 'Paid to', deliveryFee: 'Delivery fee', codEnabled: 'Cash on Delivery on', advanceEnabled: 'Advance payment on', paymentAccounts: 'Bank / e-wallet accounts', codNote: 'Cash on Delivery note', advanceNote: 'Advance payment instructions' };
+const FL = { name: 'Name', phone: 'Phone', address: 'Address', note: 'Note', lat: 'Latitude', lng: 'Longitude', items: 'Items', delivery: 'Delivery charges', subtotal: 'Subtotal', total: 'Total', status: 'Status', paymentMethod: 'Payment method', paymentStatus: 'Payment status', paymentRef: 'Transaction ID', paymentAccount: 'Paid to', deliveryFee: 'Delivery fee', codEnabled: 'Cash on Delivery on', riderOnlineEnabled: 'Online payment to rider on', riderOnlineNote: 'Online payment instruction', advanceEnabled: 'Advance payment on', paymentAccounts: 'Bank / e-wallet accounts', codNote: 'Cash on Delivery note', advanceNote: 'Advance payment instructions' };
 const fl = k => FL[k] || k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
 function Logs() {
   const [d, setD] = useState(null), [page, setPage] = useState(1), [ent, setEnt] = useState(''), [err, setErr] = useState('');
@@ -65,6 +65,8 @@ function Settings() {
     <h3 className="sub">Payment methods at checkout</h3>
     <label>Cash on Delivery<input type="checkbox" checked={f.codEnabled !== false} onChange={e => setF({ ...f, codEnabled: e.target.checked })} /></label>
     <label>Cash on Delivery note (optional, shown to customer)<input value={f.codNote || ''} onChange={e => setF({ ...f, codNote: e.target.value })} /></label>
+    <label>Online payment to rider (customer pays online when the rider arrives)<input type="checkbox" checked={f.riderOnlineEnabled !== false} onChange={e => setF({ ...f, riderOnlineEnabled: e.target.checked })} /></label>
+    <label>Instruction shown to customer for online payment (optional)<input placeholder="When the rider comes, you will pay online to him." value={f.riderOnlineNote || ''} onChange={e => setF({ ...f, riderOnlineNote: e.target.value })} /></label>
     <label>Advance payment (customer pays first by bank / e-wallet)<input type="checkbox" checked={!!f.advanceEnabled} onChange={e => setF({ ...f, advanceEnabled: e.target.checked })} /></label>
     <label>Instructions for advance payment<textarea rows="3" placeholder="e.g. Send the full amount, then enter the transaction ID at checkout." value={f.advanceNote || ''} onChange={e => setF({ ...f, advanceNote: e.target.value })} /></label>
     <p className="muted2">Your accounts (customers see these when they choose Advance payment):</p>
@@ -114,7 +116,7 @@ function OrderEditor({ o, onDone }) {
     <div className="g2"><label>Items subtotal<input value={rs(sub)} readOnly /></label>{inp('delivery', 'Delivery charges (Rs)', 'number')}</div>
     <label>Total (auto-calculated; you can overwrite it, e.g. for a discount)<input type="number" min="0" step="any" value={f.total} onChange={e => up({ total: e.target.value })} /></label>
     <div className="g2"><label>Order status<select value={f.status} onChange={e => up({ status: e.target.value })}>{['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'].map(x => <option key={x}>{x}</option>)}</select></label>
-      <label>Payment method<select value={f.paymentMethod} onChange={e => up({ paymentMethod: e.target.value })}><option value="cod">Cash on Delivery</option><option value="advance">Advance payment</option></select></label></div>
+      <label>Payment method<select value={f.paymentMethod} onChange={e => up({ paymentMethod: e.target.value })}><option value="cod">Cash on Delivery</option><option value="advance">Advance payment</option><option value="rider_online">Online payment to rider</option></select></label></div>
     <div className="g2"><label>Payment status<select value={f.paymentStatus} onChange={e => up({ paymentStatus: e.target.value })}><option>Unpaid</option><option>Paid</option></select></label>{inp('paymentRef', 'Transaction ID')}</div>
     {inp('paymentAccount', 'Paid to (account)')}
     {err && <p className="err">{err}</p>}<div className="row"><button className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save order'}</button><button type="button" className="btn ghost" onClick={() => onDone(false)}>Cancel</button></div></form>);

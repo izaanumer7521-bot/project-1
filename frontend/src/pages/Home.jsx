@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, CATS, PHONES, waLink } from '../utils/api.js'; import { WaIcon } from '../components/WhatsApp.jsx';
 import ProfileSheet from '../components/ProfileSheet.jsx'; import Logo from '../components/Logo.jsx'; import Welcome from '../components/Welcome.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import BannerSlider from '../components/BannerSlider.jsx'; import CurveCats from '../components/CurveCats.jsx';
 
-const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100, codEnabled: true, codNote: '', advanceEnabled: false, advanceNote: '', paymentAccounts: [] };
+const DEF = { area: 'Vihari City', deliveryTitle: 'Delivery: Today', deliverySub: 'Fast & safe delivery', phone1: PHONES[0], phone2: PHONES[1], hours: '7 AM – 12 AM', helpText: '', aboutUs: '', privacy: '', terms: '', deliveryFee: 100, codEnabled: true, codNote: '', advanceEnabled: false, advanceNote: '', riderOnlineEnabled: true, riderOnlineNote: '', paymentAccounts: [] };
 const ICON = { orders: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 7h6M9 11h6'], heart: ['M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z'], pin: ['M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'], user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'], bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'], help: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'], info: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M12 16v-4M12 8h.01'], shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'M9 12l2 2 4-4'], file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6M16 13H8M16 17H8'], logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5M21 12H9'], down: ['M12 3v12M7 10l5 5 5-5M5 21h14'], home: ['M3 10.5L12 3l9 7.5V21H3z', 'M9 21v-7h6v7'], grid: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M3 14h7v7H3z', 'M14 14h7v7h-7z'], cart: ['M6 6h15l-1.5 9h-12z', 'M6 6L5 3H2', 'M9 20.5h.01', 'M18 20.5h.01'], search: ['M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z', 'M21 21l-4.3-4.3'], filter: ['M4 6h16', 'M7 12h10', 'M10 18h4'] };
 const Ico = ({ n, s = 22 }) => <svg viewBox="0 0 24 24" width={s} height={s} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICON[n].map((d, i) => <path key={i} d={d} />)}</svg>;
 const TABS = [['home', 'home', 'Home'], ['categories', 'grid', 'Categories'], ['orders', 'orders', 'Orders'], ['cart', 'cart', 'Cart'], ['profile', 'user', 'Profile']];
@@ -12,7 +12,7 @@ const Thumb = ({ item }) => <div className="thumb">{item.image ? <img src={item.
 
 export default function Home() {
   const [banners, setB] = useState([]), [products, setP] = useState([]), [reviews, setR] = useState([]), [cats, setC] = useState([]), [shops, setShops] = useState([]), [S, setS] = useState(DEF);
-  const [view, setView] = useState({ v: 'home' }), [q, setQ] = useState(''), [cq, setCq] = useState(''), [toast, setToast] = useState('');
+  const [view, setView] = useState({ v: 'home' }), [q, setQ] = useState(''), [sOpen, setSOpen] = useState(false), [cq, setCq] = useState(''), [toast, setToast] = useState('');
   const [cart, setCart] = useState(() => jget('bd_cart', {})), [user, setUser] = useState(localStorage.getItem('bd_user')), [orders, setOrders] = useState(null), [placed, setPlaced] = useState(null);
   const [f, setF] = useState({ name: '', address: '', note: '' }), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false), [pay, setPay] = useState({ method: '', ref: '', account: '' });
   const [show, setShow] = useState(!sessionStorage.getItem('bd_splash')), [authOpen, setAuthOpen] = useState(false), [help, setHelp] = useState(false), [inst, setInst] = useState(null);
@@ -41,9 +41,9 @@ export default function Home() {
 
   const list = cats.length ? cats : CATS.map(([key, emoji, name]) => ({ key, emoji, name }));
   const emojiOf = k => list.find(c => c.key === k)?.emoji;
-  const nav = (v, extra = {}) => { const s = { v, ...extra }; history.pushState(s, ''); setView(s); scrollTo(0, 0); };
+  const nav = (v, extra = {}) => { setSOpen(false); const s = { v, ...extra }; history.pushState(s, ''); setView(s); scrollTo(0, 0); };
   const items = Object.values(cart), count = items.reduce((s, i) => s + i.qty, 0), total = items.reduce((s, i) => s + i.qty * i.price, 0), fee = Number(S.deliveryFee ?? 100), grand = total + fee;
-  const accts = (S.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!S.advanceEnabled && accts.length > 0, codOn = S.codEnabled !== false || !advOn, method = pay.method === 'advance' && advOn ? 'advance' : pay.method === 'cod' && codOn ? 'cod' : codOn ? 'cod' : 'advance';
+  const accts = (S.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!S.advanceEnabled && accts.length > 0, codOn = S.codEnabled !== false || !advOn, rOn = S.riderOnlineEnabled !== false, method = pay.method === 'advance' && advOn ? 'advance' : pay.method === 'rider_online' && rOn ? 'rider_online' : pay.method === 'cod' && codOn ? 'cod' : codOn ? 'cod' : rOn ? 'rider_online' : 'advance';
   const copy = t => { try { navigator.clipboard.writeText(t); setMsg(''); } catch {} };
   const add = (p, d = 1) => { setCart(c => { const n = { ...c }, qty = (c[p._id]?.qty || 0) + d; if (qty <= 0) delete n[p._id]; else n[p._id] = { _id: p._id, name: p.name, price: p.price, qty, emoji: emojiOf(p.category), image: p.image }; return n; }); if (d > 0) { setToast(p.name + ' added'); setTimeout(() => setToast(''), 1100); } };
   const install = async () => { if (inst) { inst.prompt(); await inst.userChoice; setInst(null); } else setHelp(true); };
@@ -80,7 +80,7 @@ export default function Home() {
 
   const selCat = sel === 'all' ? null : list.find(c => c.key === sel), arcItems = [{ key: 'all', name: 'All', emoji: '✨' }, ...list.map(c => ({ key: c.key, name: c.name, emoji: c.emoji, image: c.image }))];
   const inCat = (x, k) => k === 'all' || x.items.some(p => p.category === k), homeStores = shopsWith.filter(x => inCat(x, sel));
-  const foundStores = needle ? shopsWith.filter(x => x.name.toLowerCase().includes(needle)) : [], foundItems = needle ? avail.filter(p => p.name.toLowerCase().includes(needle)) : [];
+  const foundStores = needle ? shopsWith.filter(x => x.name.toLowerCase().includes(needle)) : [], foundItems = needle ? found : [], searchItems = needle ? found : avail;
   let ours = avail;
 
   let page;
@@ -88,11 +88,11 @@ export default function Home() {
     <div className="hhead"><div className="loc"><span className="locic"><Ico n="pin" s={20} /></span><span><small>Delivery location</small><b>{S.area}</b></span></div>
       <div className="hbtns"><button className="ib" aria-label="Cart" onClick={() => nav('cart')}><Ico n="cart" s={21} />{count > 0 && <u className="badge2">{count}</u>}</button><button className="ib" aria-label="Notifications" onClick={() => nav('notifications')}><Ico n="bell" s={21} /></button></div></div>
     <h1 className="greet"><small>{user ? 'Welcome back 👋' : 'Assalam o Alaikum 👋'}</small>Everything you need, <em>delivered.</em></h1>
-    <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search stores or items…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div></div>
+    <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search stores or items…" value={q} onFocus={() => setSOpen(true)} onChange={e => { setQ(e.target.value); setSOpen(true); }} />{(q || sOpen) && <button type="button" onClick={() => { setQ(''); setSOpen(false); }}>✕</button>}</div></div>
     <CurveCats items={arcItems} selected={null} onSelect={k => (k === 'all' ? nav('categories') : nav('catalog', { c: k }))} />
-    {needle ? <>{!!foundStores.length && section('Stores', '', null, <div className="storegrid">{foundStores.map(shopCard)}</div>)}
-      {!!foundItems.length && section(`Items for “${q}”`, '', null, <div className="pgrid">{foundItems.map(p => pcard(p))}</div>)}
-      {!foundStores.length && !foundItems.length && <p className="muted">Nothing found for “{q}”. Try another name.</p>}</> : <>
+    {(needle || sOpen) ? <>{!!foundStores.length && section('Stores', '', null, <div className="storegrid">{foundStores.map(shopCard)}</div>)}
+      {!!searchItems.length && section(needle ? `Items for “${q}”` : 'All items', '', null, <div className="pgrid">{searchItems.map(p => pcard(p))}</div>)}
+      {!foundStores.length && !searchItems.length && <p className="muted">{needle ? `Nothing found for “${q}”. Try another name.` : 'No items in the store yet.'}</p>}</> : <>
       <BannerSlider banners={banners} onCta={() => nav('categories')} />
       {!!shopsWith.length ? <section id="shops"><div className="sh"><h3>🏪 {selCat ? selCat.name + ' Stores' : 'Stores'}</h3><span className="cnt">{homeStores.length}</span></div><p className="sub">Tap a store to see its menu</p>
         {homeStores.length ? <div className="storegrid">{homeStores.map(shopCard)}</div> : <p className="muted">No stores in this category yet.</p>}</section> : <p className="muted">Stores will appear here soon.</p>}
@@ -114,7 +114,7 @@ export default function Home() {
       <div className="rc-card"><div className="rc-h"><b>Order #{placed._id.slice(-5).toUpperCase()}</b><small>{new Date(placed.createdAt).toLocaleString()}</small></div>
         <div className="rc-sec"><small>DELIVER TO</small><b>{placed.name}</b><p>{placed.phone}</p><p>{placed.address}</p>{placed.note && <p>Note: {placed.note}</p>}</div>
         <div className="rc-sec"><small>ORDER DETAILS</small>{placed.items.map((i, k) => <div className="rc-row" key={k}><span>{i.name} <em>× {i.qty}</em></span><b>{rs(i.price * i.qty)}</b></div>)}</div>
-        <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div><div className="rc-row"><span>Payment</span><b>{placed.paymentMethod === 'advance' ? 'Advance (we will verify your payment)' : 'Cash on Delivery'}</b></div></div></div>
+        <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div><div className="rc-row"><span>Payment</span><b>{placed.paymentMethod === 'advance' ? 'Advance (we will verify your payment)' : placed.paymentMethod === 'rider_online' ? 'Online payment to rider on delivery' : 'Cash on Delivery'}</b></div></div></div>
       <div className="row"><button className="btn" onClick={() => { setPlaced(null); nav('orders'); }}>Track my order</button><button className="btn ghost" onClick={() => { setPlaced(null); nav('home'); }}>Continue shopping</button></div></div> :
     !items.length ? <><div className="empty"><div>🛒</div><p>Your cart is empty</p><button className="btn" onClick={() => nav('categories')}>Start shopping</button></div></> : <>
       <div className="cl">{items.map(i => <div key={i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}<button type="button" className="rm" onClick={() => removeItem(i._id)}>🗑 Remove</button></div></div>)}</div>
@@ -126,7 +126,9 @@ export default function Home() {
         <input placeholder="Note (optional)" value={f.note} onChange={e => setF({ ...f, note: e.target.value })} />
         <div className="paybox"><b>Payment method</b>
           {codOn && <label className={'payopt' + (method === 'cod' ? ' on' : '')}><input type="radio" name="pm" checked={method === 'cod'} onChange={() => setPay({ ...pay, method: 'cod' })} /><span><b>Cash on Delivery</b><small>{S.codNote || 'Pay in cash when your order arrives.'}</small></span></label>}
+          {rOn && <label className={'payopt' + (method === 'rider_online' ? ' on' : '')}><input type="radio" name="pm" checked={method === 'rider_online'} onChange={() => setPay({ ...pay, method: 'rider_online' })} /><span><b>Online Payment</b><small>Pay online (bank / e-wallet) to the rider when your order arrives.</small></span></label>}
           {advOn && <label className={'payopt' + (method === 'advance' ? ' on' : '')}><input type="radio" name="pm" checked={method === 'advance'} onChange={() => setPay({ ...pay, method: 'advance' })} /><span><b>Advance payment</b><small>Pay by bank transfer or e-wallet before we deliver.</small></span></label>}
+          {method === 'rider_online' && <div className="payacct"><p>{S.riderOnlineNote || 'When the rider comes, you will pay online to him.'} <b>Amount: {rs(grand)}</b></p></div>}
           {method === 'advance' && <div className="payacct"><p>{S.advanceNote || 'Send the total amount to one of the accounts below, then enter the transaction ID.'} <b>Amount: {rs(grand)}</b></p>
             {accts.map((a, k) => <div key={k} className="acrow"><div><b>{a.provider || (a.kind === 'ewallet' ? 'E-wallet' : 'Bank')}</b><small>{a.accountTitle}{a.note && ' · ' + a.note}</small><b>{a.accountNumber}</b></div><button type="button" onClick={() => copy(a.accountNumber)}>Copy</button></div>)}
             {accts.length > 1 && <select value={pay.account} onChange={e => setPay({ ...pay, account: e.target.value })}><option value="">Which account did you pay?</option>{accts.map((a, k) => <option key={k} value={a.provider}>{a.provider}</option>)}</select>}

@@ -15,7 +15,8 @@ r.post('/', wrap(async (q, s) => {
   const subtotal = lines.reduce((x, i) => x + i.price * i.qty, 0), fee = Number((await Setting.findOne())?.deliveryFee ?? 100), delivery = Number.isFinite(fee) && fee >= 0 ? fee : 100;
   const lat = Number(q.body.lat), lng = Number(q.body.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
   const set = (await Setting.findOne())?.toObject() || {}, accts = (set.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!set.advanceEnabled && accts.length > 0, codOn = set.codEnabled !== false || !advOn;
-  const method = q.body.paymentMethod === 'advance' ? 'advance' : 'cod';
+  const method = q.body.paymentMethod === 'advance' ? 'advance' : q.body.paymentMethod === 'rider_online' ? 'rider_online' : 'cod', riderOn = set.riderOnlineEnabled !== false;
+  if (method === 'rider_online' && !riderOn) return s.status(400).json({ error: 'Online payment to rider is not available right now. Please choose another method.' });
   if (method === 'advance' && !advOn) return s.status(400).json({ error: 'Advance payment is not available right now. Please choose Cash on Delivery.' });
   if (method === 'cod' && !codOn) return s.status(400).json({ error: 'Cash on Delivery is not available right now. Please pay in advance.' });
   const paymentRef = t(q.body.paymentRef, 80); if (method === 'advance' && !paymentRef) return s.status(400).json({ error: 'Please enter your transaction ID after sending the payment.' });
@@ -32,7 +33,7 @@ r.put('/:id', auth, wrap(async (q, s) => {
   for (const [k, n] of [['name', 100], ['phone', 20], ['address', 400]]) if (k in b) { u[k] = t(b[k], n); if (!u[k]) return bad(`${k[0].toUpperCase() + k.slice(1)} cannot be empty`); }
   for (const [k, n] of [['note', 300], ['paymentRef', 80], ['paymentAccount', 80]]) if (k in b) u[k] = t(b[k], n);
   if ('status' in b) { if (!STATUSES.includes(b.status)) return bad('Invalid status'); u.status = b.status; }
-  if ('paymentMethod' in b) { if (!['cod', 'advance'].includes(b.paymentMethod)) return bad('Invalid payment method'); u.paymentMethod = b.paymentMethod; }
+  if ('paymentMethod' in b) { if (!['cod', 'advance', 'rider_online'].includes(b.paymentMethod)) return bad('Invalid payment method'); u.paymentMethod = b.paymentMethod; }
   if ('paymentStatus' in b) { if (!['Unpaid', 'Paid'].includes(b.paymentStatus)) return bad('Invalid payment status'); u.paymentStatus = b.paymentStatus; }
   for (const k of ['lat', 'lng']) if (k in b) { if (b[k] === '' || b[k] == null) u[k] = undefined; else { const n = Number(b[k]); if (!Number.isFinite(n)) return bad('Location must be numbers'); u[k] = n; } }
   if ('items' in b) {
