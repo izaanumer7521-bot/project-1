@@ -210,3 +210,26 @@ html[data-theme=light] .adm aside>button:last-child{border-color:var(--line)}
 @media(min-width:900px){.storegrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .menucat{margin-top:14px}
 .login .authart{height:170px;margin:2px 0 0}
+
+/* ===== Categories page: tidy grid, nothing cut off or pushed left ===== */
+.cgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(min-width:520px){.cgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:821px){.cgrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.cgrid .gcat{width:100%;min-width:0;padding:12px 8px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.cgrid .gcat .thumb{width:100%;max-width:110px;aspect-ratio:1;margin:0 auto;border-radius:20px}
+.cgrid .gcat .thumb span{font-size:2.1rem}
+.cgrid .gcat b{display:flex;align-items:center;justify-content:center;width:100%;padding:0;margin:10px 0 0;min-height:2.4em;font-size:.88rem;line-height:1.2;text-align:center;overflow-wrap:anywhere}
+.cgrid .gcat i{display:none}
+
+/* ===== WhatsApp button in the contact block: readable in light and dark mode ===== */
+.contact a.cwa{color:#fff!important;font-size:1rem;font-weight:800;background:linear-gradient(135deg,#25d366,#128c7e)!important;box-shadow:0 6px 18px #25d36666;text-shadow:0 1px 2px #0003}
+.contact a.cwa svg{color:#fff;fill:#fff}
+.acts .hwa,.acts .hwa svg{color:#fff!important}
+
+/* ===== Cart remove + order cancel ===== */
+.ci2 .r{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.rm,.clearcart,.cancelbtn{cursor:pointer;font:inherit;font-weight:700;border-radius:999px;background:color-mix(in srgb,#ff5a5f 12%,var(--surface));color:#ff5a5f;border:1.5px solid #ff5a5f}
+.rm{font-size:.74rem;padding:3px 10px}
+.clearcart{display:block;margin:10px 0 0 auto;font-size:.82rem;padding:6px 14px}
+.cancelbtn{display:block;margin-top:10px;width:100%;padding:10px;font-size:.92rem}
+.rm:hover,.clearcart:hover,.cancelbtn:hover{background:#ff5a5f;color:#fff}

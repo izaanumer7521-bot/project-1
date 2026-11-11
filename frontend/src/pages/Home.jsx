@@ -58,6 +58,8 @@ export default function Home() {
   const toggleFav = p => setFavs(a => a.includes(p._id) ? a.filter(x => x !== p._id) : [...a, p._id]);
   const welcomeDone = fresh => { setShow(false); setAuthOpen(false); setUser(localStorage.getItem('bd_user')); if (fresh) { nav('profile'); setSheet(true); } };
   const logout = () => { localStorage.removeItem('bd_user'); localStorage.removeItem('bd_ctoken'); setUser(null); setProfile(null); };
+  const removeItem = id => setCart(c => { const n = { ...c }; delete n[id]; return n; });
+  const cancelOrder = async o => { if (!confirm('Cancel this order?' + (o.paymentMethod === 'advance' && o.paymentStatus === 'Paid' ? ' We will contact you about your advance payment.' : ''))) return; try { const d = await api(`orders/${o._id}/cancel`, 'POST'); setOrders(os => os.map(x => (x._id === d._id ? d : x))); } catch (x) { alert(x.message); } };
   const qty = p => { const n = cart[p._id]?.qty || 0; return n ? <div className="qty"><button onClick={() => add(p, -1)}>−</button>{n}<button onClick={() => add(p)}>+</button></div> : null; };
   const pcard = (p, deal) => { const pct = p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0, n = cart[p._id]?.qty || 0;
     return (<article className={'pc' + (deal ? ' deal' : '')} key={p._id}><div className="pci"><Thumb item={{ ...p, emoji: emojiOf(p.category) }} />{pct > 0 && <span className="off">⚡ {pct}% OFF</span>}<button className={'heart' + (favs.includes(p._id) ? ' on' : '')} aria-label="Favourite" onClick={() => toggleFav(p)}>{favs.includes(p._id) ? '♥' : '♡'}</button>
@@ -113,7 +115,8 @@ export default function Home() {
         <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div><div className="rc-row"><span>Payment</span><b>{placed.paymentMethod === 'advance' ? 'Advance (we will verify your payment)' : 'Cash on Delivery'}</b></div></div></div>
       <div className="row"><button className="btn" onClick={() => { setPlaced(null); nav('orders'); }}>Track my order</button><button className="btn ghost" onClick={() => { setPlaced(null); nav('home'); }}>Continue shopping</button></div></div> :
     !items.length ? <><div className="empty"><div>🛒</div><p>Your cart is empty</p><button className="btn" onClick={() => nav('categories')}>Start shopping</button></div></> : <>
-      <div className="cl">{items.map(i => <div key={i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}</div></div>)}</div>
+      <div className="cl">{items.map(i => <div key={i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}<button type="button" className="rm" onClick={() => removeItem(i._id)}>🗑 Remove</button></div></div>)}</div>
+      <button type="button" className="clearcart" onClick={() => confirm('Remove everything from your cart?') && setCart({})}>Clear cart</button>
       <form className="checkout" onSubmit={order}><div className="sumbox"><div><span>Subtotal</span><b>{rs(total)}</b></div><div><span>Delivery charges</span><b>{rs(fee)}</b></div><div className="grand"><span>Total</span><b>{rs(grand)}</b></div></div>
         <input required placeholder="Your name" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
         <input required inputMode="tel" placeholder="Phone number" value={user || f.phone || ''} readOnly={!!user} onChange={e => setF({ ...f, phone: e.target.value })} />
@@ -130,7 +133,7 @@ export default function Home() {
         {msg && <p className="err">{msg}</p>}<button className="btn big" disabled={busy}>{busy ? 'Placing…' : 'Place order · ' + rs(grand)}</button></form></>}</>);
   else if (view.v === 'orders') page = (<>{back('My Orders')}{orders === null ? <p className="muted">Loading…</p> : !orders.length ? <div className="empty"><div>🧾</div><p>No orders yet</p><button className="btn" onClick={() => nav('categories')}>Order now</button></div> :
     orders.map(o => <div key={o._id} className="ocard"><div className="oh"><b>Order #{o._id.slice(-5).toUpperCase()}</b><span className="chip2" data-s={o.status}>{o.status}</span></div><small>{new Date(o.createdAt).toLocaleString()}</small>
-      <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')}</p><b>{rs(o.total)}</b></div>)}</>);
+      <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')}</p><b>{rs(o.total)}</b>{['New', 'Confirmed'].includes(o.status) && <button type="button" className="cancelbtn" onClick={() => cancelOrder(o)}>✕ Cancel order</button>}</div>)}</>);
   else if (view.v === 'page') { const T = { help: ['Help Center', S.helpText], about: ['About Us', S.aboutUs], privacy: ['Privacy Policy', S.privacy], terms: ['Terms & Conditions', S.terms] }[view.page] || ['', ''];
     page = (<>{back(T[0])}<div className="doc"><p>{T[1]}</p>{view.page === 'help' && <div className="row"><a className="btn" href={`tel:${S.phone1}`}>📞 Call {S.phone1}</a></div>}</div></>); }
   else if (view.v === 'favourites') { const fp = avail.filter(p => favs.includes(p._id));

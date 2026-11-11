@@ -49,6 +49,16 @@ r.put('/:id', auth, wrap(async (q, s) => {
   s.json(d);
 }));
 r.delete('/:id', auth, wrap(async (q, s) => { const o = await Order.findByIdAndDelete(q.params.id); if (o) await logAction(q, { entity: 'Order', summary: `Deleted order ${code(o)} (${o.name}, Rs ${o.total})` }); s.json({ ok: true }); }));
+// Customer cancels their own order (only before it is on the way). The id comes from the order list saved on the customer's device.
+r.post('/:id/cancel', wrap(async (q, s) => {
+  if (!mongoose.isValidObjectId(q.params.id)) return s.status(404).json({ error: 'Order not found' });
+  const o = await Order.findById(q.params.id); if (!o) return s.status(404).json({ error: 'Order not found' });
+  if (o.status === 'Cancelled') return s.status(400).json({ error: 'This order is already cancelled.' });
+  if (!['New', 'Confirmed'].includes(o.status)) return s.status(400).json({ error: 'This order is already on the way or delivered, so it can no longer be cancelled. Please call us.' });
+  o.status = 'Cancelled'; await o.save();
+  await logAction({ actor: 'Customer (' + o.phone + ')' }, { entity: 'Order', summary: `Customer cancelled order ${code(o)} (${o.name}, Rs ${o.total})` + (o.paymentStatus === 'Paid' ? ' – advance was paid, refund needed' : '') });
+  s.json(o.toObject());
+}));
 r.post('/lookup', wrap(async (q, s) => {
   const ids = (q.body.ids || []).filter(i => mongoose.isValidObjectId(i)).slice(0, 30);
   s.json(await Order.find({ _id: { $in: ids } }).sort({ createdAt: -1 }));
