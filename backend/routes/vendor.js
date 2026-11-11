@@ -6,14 +6,21 @@ import { Admin, Product, Category, Order } from '../models/index.js'; import { v
 const r = Router(); r.use(vendorOnly);
 const bad = (s, m, c = 400) => s.status(c).json({ error: m });
 // Vendors can only send these fields. shopId, bestSeller and hotDeal are never accepted from a vendor.
+// Size / portion options, e.g. Half Rs 300 + Full Rs 550, or 1 Scoop / 2 Scoops. Rows with an empty label and price are ignored.
+export function cleanOptions(raw) {
+  const list = [], seen = new Set(); for (const x of Array.isArray(raw) ? raw : []) { const label = String(x?.label ?? '').trim().slice(0, 40), ps = x?.price; if (!label && (ps === '' || ps == null)) continue; const price = Number(ps);
+    if (!label || ps === '' || ps == null || !Number.isFinite(price) || price < 0) return { error: 'Each size needs a name and a price' }; if (seen.has(label.toLowerCase())) return { error: 'Size names must be different' }; seen.add(label.toLowerCase()); list.push({ label, price }); }
+  return { list: list.slice(0, 8) };
+}
 function clean(b, full) {
   const u = {}, t = (v, n) => String(v ?? '').trim().slice(0, n), num = v => { const n = Number(v); return v !== '' && v != null && Number.isFinite(n) && n >= 0 ? n : null; };
   if (full || 'name' in b) { u.name = t(b.name, 120); if (!u.name) return { error: 'Product name is required' }; }
   if (full || 'category' in b) { u.category = t(b.category, 40); if (!u.category) return { error: 'Choose a category' }; }
-  if (full || 'price' in b) { u.price = num(b.price); if (u.price == null) return { error: 'Enter a valid price' }; }
+  if ((full || 'price' in b) && !(Array.isArray(b.options) && b.options.some(x => x?.label))) { u.price = num(b.price); if (u.price == null) return { error: 'Enter a valid price' }; }
   if ('oldPrice' in b) { if (b.oldPrice === '' || b.oldPrice == null) u.oldPrice = null; else { u.oldPrice = num(b.oldPrice); if (u.oldPrice == null) return { error: 'Old price must be a number' }; } }
   if ('unit' in b) u.unit = t(b.unit, 40); if ('description' in b) u.description = t(b.description, 500); if ('image' in b) u.image = t(b.image, 3e6);
   if ('section' in b) u.section = t(b.section, 40);
+  if ('options' in b) { const o = cleanOptions(b.options); if (o.error) return o; u.options = o.list; if (o.list.length) u.price = Math.min(...o.list.map(x => x.price)); }
   if ('available' in b) u.available = !!b.available;
   return u;
 }

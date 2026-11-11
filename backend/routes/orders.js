@@ -10,7 +10,10 @@ r.post('/', wrap(async (q, s) => {
     const p = by[String(i?._id)], qty = Math.floor(Number(i?.qty));
     if (!p || p.available === false) return s.status(400).json({ error: `"${i?.name || 'An item'}" is no longer available. Please remove it from your cart.` });
     if (!(qty >= 1 && qty <= 99)) return s.status(400).json({ error: 'Invalid quantity for ' + p.name });
-    lines.push({ name: p.name, price: p.price, qty, shopId: p.shopId || '' });
+    // Products with sizes (Half/Full, Small/Large, scoops…): the customer must pick one, and its price comes from the database
+    const opts = p.options || []; let opt = null;
+    if (opts.length) { opt = opts.find(o => o.label === String(i?.option ?? '')); if (!opt) return s.status(400).json({ error: `Please choose a size for "${p.name}".` }); }
+    lines.push({ name: opt ? `${p.name} (${opt.label})` : p.name, price: opt ? opt.price : p.price, qty, shopId: p.shopId || '', ...(opt && { option: opt.label }) });
   }
   const subtotal = lines.reduce((x, i) => x + i.price * i.qty, 0), fee = Number((await Setting.findOne())?.deliveryFee ?? 100), delivery = Number.isFinite(fee) && fee >= 0 ? fee : 100;
   const lat = Number(q.body.lat), lng = Number(q.body.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
@@ -38,7 +41,7 @@ r.put('/:id', auth, wrap(async (q, s) => {
   for (const k of ['lat', 'lng']) if (k in b) { if (b[k] === '' || b[k] == null) u[k] = undefined; else { const n = Number(b[k]); if (!Number.isFinite(n)) return bad('Location must be numbers'); u[k] = n; } }
   if ('items' in b) {
     if (!Array.isArray(b.items) || !b.items.length) return bad('An order needs at least one item');
-    u.items = []; for (const i of b.items) { const name = t(i?.name, 120), price = money(i?.price), qty = Math.floor(Number(i?.qty)); if (!name || price == null || !(qty >= 1 && qty <= 999)) return bad('Each item needs a name, a price and a quantity of 1 or more'); const shopId = t(i?.shopId, 40); u.items.push({ name, price, qty, ...(shopId && { shopId }) }); }
+    u.items = []; for (const i of b.items) { const name = t(i?.name, 120), price = money(i?.price), qty = Math.floor(Number(i?.qty)); if (!name || price == null || !(qty >= 1 && qty <= 999)) return bad('Each item needs a name, a price and a quantity of 1 or more'); const shopId = t(i?.shopId, 40); u.items.push({ name, price, qty, ...(shopId && { shopId }), ...(t(i?.option, 40) && { option: t(i.option, 40) }) }); }
   }
   const items = u.items || o.items; u.subtotal = items.reduce((x, i) => x + i.price * i.qty, 0);
   if ('delivery' in b) { const d = money(b.delivery); if (d == null) return bad('Delivery charges must be a number'); u.delivery = d; }

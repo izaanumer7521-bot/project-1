@@ -52,3 +52,13 @@
 .oedit .pickit span{min-width:0}.oedit .pickit b{display:block;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.oedit .pickit small{color:var(--muted);font-size:.74rem}
 .oedit .pickit strong{font-size:.85rem;color:var(--c1)}
 .oedit .pickit i{font-style:normal;font-weight:800;font-size:.78rem;background:var(--grad);color:#fff;border-radius:999px;padding:2px 8px}
+/* product sizes editor */
+.optsed{margin-top:6px;display:flex;flex-direction:column;gap:8px}
+.optpre{display:flex;flex-wrap:wrap;gap:6px}
+.optpre button,.optadd{cursor:pointer;border-radius:999px;padding:6px 12px;font-weight:700;font-size:.82rem;background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.optpre button:hover{border-color:var(--c1);color:var(--c1)}
+.optadd{align-self:flex-start;background:transparent;color:var(--c1);border:1.5px dashed var(--c1)}
+.optrow{display:grid;grid-template-columns:1fr 110px 36px;gap:6px}
+.optrow input{margin:0!important}
+.optrow button{border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.optsed small{color:var(--muted);font-weight:400}

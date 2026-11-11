@@ -13,7 +13,7 @@ const Thumb = ({ item }) => <div className="thumb">{item.image ? <img src={item.
 export default function Home() {
   const [banners, setB] = useState([]), [products, setP] = useState([]), [reviews, setR] = useState([]), [cats, setC] = useState([]), [shops, setShops] = useState([]), [S, setS] = useState(DEF);
   const [view, setView] = useState({ v: 'home' }), [q, setQ] = useState(''), [sOpen, setSOpen] = useState(false), [sec, setSec] = useState('all'), [cq, setCq] = useState(''), [toast, setToast] = useState('');
-  const [cart, setCart] = useState(() => jget('bd_cart', {})), [user, setUser] = useState(localStorage.getItem('bd_user')), [orders, setOrders] = useState(null), [placed, setPlaced] = useState(null);
+  const [szSel, setSzSel] = useState({}), [cart, setCart] = useState(() => jget('bd_cart', {})), [user, setUser] = useState(localStorage.getItem('bd_user')), [orders, setOrders] = useState(null), [placed, setPlaced] = useState(null);
   const [f, setF] = useState({ name: '', address: '', note: '' }), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false), [pay, setPay] = useState({ method: '', ref: '', account: '' });
   const [show, setShow] = useState(!sessionStorage.getItem('bd_splash')), [authOpen, setAuthOpen] = useState(false), [help, setHelp] = useState(false), [inst, setInst] = useState(null);
   const [profile, setProfile] = useState(null), [sheet, setSheet] = useState(false), [favs, setFavs] = useState(() => jget('bd_favs', []));
@@ -45,27 +45,30 @@ export default function Home() {
   const items = Object.values(cart), count = items.reduce((s, i) => s + i.qty, 0), total = items.reduce((s, i) => s + i.qty * i.price, 0), fee = Number(S.deliveryFee ?? 100), grand = total + fee;
   const accts = (S.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!S.advanceEnabled && accts.length > 0, codOn = S.codEnabled !== false || !advOn, rOn = S.riderOnlineEnabled !== false, method = pay.method === 'advance' && advOn ? 'advance' : pay.method === 'rider_online' && rOn ? 'rider_online' : pay.method === 'cod' && codOn ? 'cod' : codOn ? 'cod' : rOn ? 'rider_online' : 'advance';
   const copy = t => { try { navigator.clipboard.writeText(t); setMsg(''); } catch {} };
-  const add = (p, d = 1) => { setCart(c => { const n = { ...c }, qty = (c[p._id]?.qty || 0) + d; if (qty <= 0) delete n[p._id]; else n[p._id] = { _id: p._id, name: p.name, price: p.price, qty, emoji: emojiOf(p.category), image: p.image }; return n; }); if (d > 0) { setToast(p.name + ' added'); setTimeout(() => setToast(''), 1100); } };
+  const optOf = p => (p.options && p.options.length ? p.options.find(o => o.label === szSel[p._id]) || p.options[0] : null);
+  const add = (p, d = 1) => { const o = p.key ? null : optOf(p), key = p.key || p._id + (o ? '|' + o.label : ''); setCart(c => { const n = { ...c }, qty = (c[key]?.qty || 0) + d; if (qty <= 0) delete n[key]; else n[key] = p.key ? { ...c[key], qty } : { key, _id: p._id, name: p.name, option: o ? o.label : '', price: o ? o.price : p.price, qty, emoji: emojiOf(p.category), image: p.image }; return n; }); if (d > 0) { setToast(p.name + ' added'); setTimeout(() => setToast(''), 1100); } };
   const install = async () => { if (inst) { inst.prompt(); await inst.userChoice; setInst(null); } else setHelp(true); };
   const order = async e => {
     e.preventDefault(); setMsg('');
     if (method === 'advance' && !pay.ref.trim()) return setMsg('Please send the payment first, then enter your transaction ID.');
     setBusy(true);
-    try { const d = await api('orders', 'POST', { ...f, paymentMethod: method, paymentRef: pay.ref, paymentAccount: pay.account || (accts[0] ? accts[0].provider : ''), phone: user || f.phone, items: items.map(({ _id, name, qty }) => ({ _id, name, qty })), ...(profile?.lat != null && f.address.trim() === (profile.street || '').trim() ? { lat: profile.lat, lng: profile.lng } : {}) });
+    try { const d = await api('orders', 'POST', { ...f, paymentMethod: method, paymentRef: pay.ref, paymentAccount: pay.account || (accts[0] ? accts[0].provider : ''), phone: user || f.phone, items: items.map(({ _id, name, qty, option }) => ({ _id, name, qty, option: option || '' })), ...(profile?.lat != null && f.address.trim() === (profile.street || '').trim() ? { lat: profile.lat, lng: profile.lng } : {}) });
       localStorage.setItem('bd_orders', JSON.stringify([d._id, ...jget('bd_orders', [])].slice(0, 30))); setCart({}); setPay({ method: '', ref: '', account: '' }); setPlaced(d); } catch (x) { setMsg(x.message); } setBusy(false);
   };
 
   const toggleFav = p => setFavs(a => a.includes(p._id) ? a.filter(x => x !== p._id) : [...a, p._id]);
   const welcomeDone = fresh => { setShow(false); setAuthOpen(false); setUser(localStorage.getItem('bd_user')); if (fresh) { nav('profile'); setSheet(true); } };
   const logout = () => { localStorage.removeItem('bd_user'); localStorage.removeItem('bd_ctoken'); setUser(null); setProfile(null); };
-  const removeItem = id => setCart(c => { const n = { ...c }; delete n[id]; return n; });
+  const removeItem = k => setCart(c => { const n = { ...c }; delete n[k]; return n; });
   const cancelOrder = async o => { if (!confirm('Cancel this order?' + (o.paymentMethod === 'advance' && o.paymentStatus === 'Paid' ? ' We will contact you about your advance payment.' : ''))) return; try { const d = await api(`orders/${o._id}/cancel`, 'POST'); setOrders(os => os.map(x => (x._id === d._id ? d : x))); } catch (x) { alert(x.message); } };
-  const qty = p => { const n = cart[p._id]?.qty || 0; return n ? <div className="qty"><button onClick={() => add(p, -1)}>−</button>{n}<button onClick={() => add(p)}>+</button></div> : null; };
-  const pcard = (p, deal) => { const pct = p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0, n = cart[p._id]?.qty || 0;
+  const keyOf = p => p.key || p._id + (optOf(p) ? '|' + optOf(p).label : '');
+  const qty = p => { const n = cart[keyOf(p)]?.qty || 0; return n ? <div className="qty"><button onClick={() => add(p, -1)}>−</button>{n}<button onClick={() => add(p)}>+</button></div> : null; };
+  const pcard = (p, deal) => { const pct = p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0, n = cart[keyOf(p)]?.qty || 0, o = optOf(p), price = o ? o.price : p.price;
     return (<article className={'pc' + (deal ? ' deal' : '')} key={p._id}><div className="pci"><Thumb item={{ ...p, emoji: emojiOf(p.category) }} />{pct > 0 && <span className="off">⚡ {pct}% OFF</span>}<button className={'heart' + (favs.includes(p._id) ? ' on' : '')} aria-label="Favourite" onClick={() => toggleFav(p)}>{favs.includes(p._id) ? '♥' : '♡'}</button>
       {!deal && (n ? <div className="mini">{qty(p)}</div> : <button className="plus" aria-label={'Add ' + p.name} onClick={() => add(p)}>+</button>)}</div>
       <h4>{p.name}</h4>{shopOf(p.shopId) && <i className="stag">🏪 {shopOf(p.shopId).name}</i>}<small>{p.description}</small>
-      <div className="pr"><b>{rs(p.price)}</b>{p.oldPrice > p.price && <s>{rs(p.oldPrice)}</s>}<em>{p.unit}</em></div>
+      {!!p.options?.length && <div className="sizes" role="radiogroup" aria-label="Choose size">{p.options.map(x => <button type="button" role="radio" aria-checked={o.label === x.label} key={x.label} className={o.label === x.label ? 'on' : ''} onClick={() => setSzSel(s => ({ ...s, [p._id]: x.label }))}><span>{x.label}</span><b>{rs(x.price)}</b></button>)}</div>}
+      <div className="pr"><b>{rs(price)}</b>{!o && p.oldPrice > p.price && <s>{rs(p.oldPrice)}</s>}<em>{p.unit}</em></div>
       {deal && (n ? <div className="dq">{qty(p)}</div> : <button className="btn sm" onClick={() => add(p)}>Add to cart →</button>)}</article>); };
   const section = (title, action, onAction, body, cls = '') => <section className={cls}><div className="sh"><h3>{title}</h3>{action && <button onClick={onAction}>{action}</button>}</div>{body}</section>;
   const avail = products.filter(p => p.available !== false);
@@ -120,7 +123,7 @@ export default function Home() {
         <div className="rc-sec tot"><div className="rc-row"><span>Subtotal</span><b>{rs(placed.subtotal)}</b></div><div className="rc-row"><span>Delivery charges</span><b>{rs(placed.delivery)}</b></div><div className="rc-row grand"><span>Total</span><b>{rs(placed.total)}</b></div><div className="rc-row"><span>Payment</span><b>{placed.paymentMethod === 'advance' ? 'Advance (we will verify your payment)' : placed.paymentMethod === 'rider_online' ? 'Online payment to rider on delivery' : 'Cash on Delivery'}</b></div></div></div>
       <div className="row"><button className="btn" onClick={() => { setPlaced(null); nav('orders'); }}>Track my order</button><button className="btn ghost" onClick={() => { setPlaced(null); nav('home'); }}>Continue shopping</button></div></div> :
     !items.length ? <><div className="empty"><div>🛒</div><p>Your cart is empty</p><button className="btn" onClick={() => nav('categories')}>Start shopping</button></div></> : <>
-      <div className="cl">{items.map(i => <div key={i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}<button type="button" className="rm" onClick={() => removeItem(i._id)}>🗑 Remove</button></div></div>)}</div>
+      <div className="cl">{items.map(i => <div key={i.key || i._id} className="ci2"><div className="th"><Thumb item={i} /></div><div><b>{i.name}{i.option && <em className="szt">{i.option}</em>}</b><small>{rs(i.price)} each</small></div><div className="r"><b>{rs(i.qty * i.price)}</b>{qty(i)}<button type="button" className="rm" onClick={() => removeItem(i.key || i._id)}>🗑 Remove</button></div></div>)}</div>
       <button type="button" className="clearcart" onClick={() => confirm('Remove everything from your cart?') && setCart({})}>Clear cart</button>
       <form className="checkout" onSubmit={order}><div className="sumbox"><div><span>Subtotal</span><b>{rs(total)}</b></div><div><span>Delivery charges</span><b>{rs(fee)}</b></div><div className="grand"><span>Total</span><b>{rs(grand)}</b></div></div>
         <input required placeholder="Your name" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
