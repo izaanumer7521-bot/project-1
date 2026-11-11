@@ -80,7 +80,7 @@ export default function Home() {
 
   const selCat = sel === 'all' ? null : list.find(c => c.key === sel), arcItems = [{ key: 'all', name: 'All', emoji: '✨' }, ...list.map(c => ({ key: c.key, name: c.name, emoji: c.emoji, image: c.image }))];
   const inCat = (x, k) => k === 'all' || x.items.some(p => p.category === k), homeStores = shopsWith.filter(x => inCat(x, sel));
-  const foundStores = needle ? shopsWith.filter(x => (x.name + ' ' + x.items.map(p => p.name).join(' ')).toLowerCase().includes(needle)) : [];
+  const foundStores = needle ? shopsWith.filter(x => x.name.toLowerCase().includes(needle)) : [], foundItems = needle ? avail.filter(p => p.name.toLowerCase().includes(needle)) : [];
   let ours = avail;
 
   let page;
@@ -88,9 +88,11 @@ export default function Home() {
     <div className="hhead"><div className="loc"><span className="locic"><Ico n="pin" s={20} /></span><span><small>Delivery location</small><b>{S.area}</b></span></div>
       <div className="hbtns"><button className="ib" aria-label="Cart" onClick={() => nav('cart')}><Ico n="cart" s={21} />{count > 0 && <u className="badge2">{count}</u>}</button><button className="ib" aria-label="Notifications" onClick={() => nav('notifications')}><Ico n="bell" s={21} /></button></div></div>
     <h1 className="greet"><small>{user ? 'Welcome back 👋' : 'Assalam o Alaikum 👋'}</small>Everything you need, <em>delivered.</em></h1>
-    <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search stores…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div></div>
+    <div className="srow"><div className="search hs"><span><Ico n="search" s={20} /></span><input placeholder="Search stores or items…" value={q} onChange={e => setQ(e.target.value)} />{q && <button onClick={() => setQ('')}>✕</button>}</div></div>
     <CurveCats items={arcItems} selected={null} onSelect={k => (k === 'all' ? nav('categories') : nav('catalog', { c: k }))} />
-    {needle ? section(`Stores for “${q}”`, '', null, foundStores.length ? <div className="storegrid">{foundStores.map(shopCard)}</div> : <p className="muted">No store found. Try another name.</p>) : <>
+    {needle ? <>{!!foundStores.length && section('Stores', '', null, <div className="storegrid">{foundStores.map(shopCard)}</div>)}
+      {!!foundItems.length && section(`Items for “${q}”`, '', null, <div className="pgrid">{foundItems.map(p => pcard(p))}</div>)}
+      {!foundStores.length && !foundItems.length && <p className="muted">Nothing found for “{q}”. Try another name.</p>}</> : <>
       <BannerSlider banners={banners} onCta={() => nav('categories')} />
       {!!shopsWith.length ? <section id="shops"><div className="sh"><h3>🏪 {selCat ? selCat.name + ' Stores' : 'Stores'}</h3><span className="cnt">{homeStores.length}</span></div><p className="sub">Tap a store to see its menu</p>
         {homeStores.length ? <div className="storegrid">{homeStores.map(shopCard)}</div> : <p className="muted">No stores in this category yet.</p>}</section> : <p className="muted">Stores will appear here soon.</p>}

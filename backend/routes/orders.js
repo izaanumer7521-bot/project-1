@@ -57,6 +57,7 @@ r.post('/:id/cancel', wrap(async (q, s) => {
   if (!['New', 'Confirmed'].includes(o.status)) return s.status(400).json({ error: 'This order is already on the way or delivered, so it can no longer be cancelled. Please call us.' });
   o.status = 'Cancelled'; await o.save();
   await logAction({ actor: 'Customer (' + o.phone + ')' }, { entity: 'Order', summary: `Customer cancelled order ${code(o)} (${o.name}, Rs ${o.total})` + (o.paymentStatus === 'Paid' ? ' – advance was paid, refund needed' : '') });
+  await notifyOrder(o, true); // admin + the shop owner(s) of this order get a cancel alert (awaited: Vercel stops right after the response)
   s.json(o.toObject());
 }));
 r.post('/lookup', wrap(async (q, s) => {
