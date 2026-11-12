@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import { pushState, enablePush, disablePush, testPush } from '../utils/push.js';
+import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import MenuImport from '../components/MenuImport.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import { pushState, enablePush, disablePush, testPush } from '../utils/push.js';
 const catOpts = CATS.map(c => [c[0], c[2]]);
 const SCHEMA = {
   banners: [['title', 'Title'], ['subtitle', 'Subtitle'], ['image', 'Banner image (best size 1200×600 px, keep text in the centre)', 'image', 1200], ['showText', 'Show title on top of the image', 'bool'], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
@@ -224,9 +224,9 @@ function VendorAccount() {
     <label>New password (8+ characters)<input type="password" required minLength={8} value={f.newPassword} onChange={e => setF({ ...f, newPassword: e.target.value })} /></label>
     {m && <p className="err">{m}</p>}<button className="btn">Save</button></form>);
 }
-const IC = { dashboard: '📊', orders: '🧾', products: '📦', shops: '🏪', banners: '🖼️', categories: '🗂️', reviews: '⭐', customers: '👥', logs: '📜', settings: '⚙️', account: '🔐', vorders: '🧾', vproducts: '📦', vaccount: '🔐' };
+const IC = { dashboard: '📊', orders: '🧾', products: '📦', import: '📥', shops: '🏪', banners: '🖼️', categories: '🗂️', reviews: '⭐', customers: '👥', logs: '📜', settings: '⚙️', account: '🔐', vorders: '🧾', vproducts: '📦', vaccount: '🔐' };
 const Bar = ({ open, setOpen, title }) => <><header className="atop"><button type="button" aria-label="Menu" className={'burger' + (open ? ' x' : '')} onClick={() => setOpen(!open)}><i /><i /><i /></button><b>{title}</b><ThemeToggle /></header><div className={'scrim' + (open ? ' on' : '')} onClick={() => setOpen(false)} /></>;
-const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
+const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['import', 'Import menu'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
 const VENDOR_TABS = [['vorders', 'Orders'], ['vproducts', 'My products'], ['vaccount', 'Account']];
 export default function Admin() {
   const [email, setEmail] = useState(null), [role, setRole] = useState('admin'), [shopName, setShopName] = useState(''), [tab, setTab] = useState('dashboard'), [open, setOpen] = useState(false), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
@@ -245,5 +245,5 @@ export default function Admin() {
   return (<div className="adm"><Bar open={open} setOpen={setOpen} title="ByDoor Admin" /><aside className={open ? 'open' : ''}><Logo small /><small>{email}</small>
     {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}
     <div className="sidetgl"><ThemeToggle /><span>Light / Dark mode</span></div><button onClick={logout}>Log out</button></aside>
-    <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
+    <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'import' ? <MenuImport /> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }
