@@ -8,7 +8,7 @@ const Ico = ({ n, s = 22 }) => <svg viewBox="0 0 24 24" width={s} height={s} fil
 const TABS = [['home', 'home', 'Home'], ['categories', 'grid', 'Categories'], ['orders', 'orders', 'Orders'], ['cart', 'cart', 'Cart'], ['profile', 'user', 'Profile']];
 const rs = n => 'Rs ' + Number(n || 0).toLocaleString();
 const jget = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
-const Thumb = ({ item }) => <div className="thumb">{item.image ? <img src={item.image} alt={item.name} loading="lazy" /> : <span>{item.emoji || '📦'}</span>}</div>;
+const Thumb = ({ item }) => <div className="thumb">{item.image ? <img src={item.image} alt={item.name} loading="lazy" decoding="async" /> : <span>{item.emoji || '📦'}</span>}</div>;
 
 export default function Home() {
   const [banners, setB] = useState([]), [products, setP] = useState([]), [reviews, setR] = useState([]), [cats, setC] = useState([]), [shops, setShops] = useState([]), [S, setS] = useState(DEF);
@@ -21,8 +21,10 @@ export default function Home() {
   const [sel, setSel] = useState('all'), [sort, setSort] = useState('pop'), [fopen, setFopen] = useState(false);
 
   useEffect(() => {
-    api('banners').then(d => setB(d.filter(b => b.active))).catch(() => {}); api('products').then(setP).catch(() => {}); api('reviews').then(setR).catch(() => {}); api('shops/public').then(setShops).catch(() => {});
-    api('categories').then(d => setC(d.filter(c => c.active !== false))).catch(() => {}); api('settings').then(d => setS({ ...DEF, ...d })).catch(() => {});
+    // Show the last saved lists at once (instant repeat visits), then refresh from the server. Pictures are small cacheable links (?lite=1).
+    const load = (path, set, fix = d => d) => { const k = 'bd_c_' + path; try { const c = JSON.parse(localStorage.getItem(k)); if (Array.isArray(c) || (c && typeof c === 'object')) set(fix(c)); } catch {} api(path).then(d => { set(fix(d)); try { localStorage.setItem(k, JSON.stringify(d)); } catch {} }).catch(() => {}); };
+    load('banners?lite=1', setB, d => d.filter(b => b.active)); load('products?lite=1', setP); load('reviews', setR); load('shops/public', setShops);
+    load('categories?lite=1', setC, d => d.filter(c => c.active !== false)); load('settings', d => setS({ ...DEF, ...d }));
     history.replaceState({ v: 'home' }, ''); const pop = e => setView(e.state || { v: 'home' }); addEventListener('popstate', pop);
     const h = e => { e.preventDefault(); setInst(e); }; addEventListener('beforeinstallprompt', h); addEventListener('appinstalled', () => setDone(true));
     return () => { removeEventListener('popstate', pop); removeEventListener('beforeinstallprompt', h); };
