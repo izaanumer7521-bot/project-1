@@ -36,9 +36,11 @@ const fixSection = async (q, u) => { if (u.section) { const ex = (await Product.
 // Orders that contain this shop's products. A vendor only ever sees ITS OWN lines and the amount for them:
 // no other shop's items, no order total, no delivery charges, and no customer phone or address.
 r.get('/orders', wrap(async (q, s) => {
-  const id = q.vendor.shopId, rows = await Order.find({ 'items.shopId': id }).sort({ createdAt: -1 }).limit(200);
-  s.json(rows.map(o => { const items = (o.items || []).filter(i => i.shopId === id).map(i => ({ name: i.name, price: i.price, qty: i.qty })); return { _id: o._id, code: String(o._id).slice(-5).toUpperCase(), createdAt: o.createdAt, status: o.status || 'New', customer: o.name, items, subtotal: items.reduce((x, i) => x + i.price * i.qty, 0) }; }));
+  const id = q.vendor.shopId, rows = await Order.find({ 'items.shopId': id }).select('-prescription').sort({ createdAt: -1 }).limit(200), withRx = new Set((await Order.find({ 'items.shopId': id, 'prescription.0': { $exists: true } }).select('_id').lean()).map(x => String(x._id)));
+  s.json(rows.map(o => { const items = (o.items || []).filter(i => i.shopId === id).map(i => ({ name: i.name, price: i.price, qty: i.qty })); return { _id: o._id, code: String(o._id).slice(-5).toUpperCase(), createdAt: o.createdAt, status: o.status || 'New', customer: o.name, kind: o.kind || 'regular', rxMode: o.rxMode || '', hasRx: withRx.has(String(o._id)), rxNote: o.rxNote || o.note || '', items, subtotal: items.reduce((x, i) => x + i.price * i.qty, 0) }; }));
 }));
+// A prescription photo is only visible to the store the customer sent it to
+r.get('/orders/:id/prescription', wrap(async (q, s) => { if (!mongoose.isValidObjectId(q.params.id)) return bad(s, 'Order not found', 404); const o = await Order.findOne({ _id: q.params.id, 'items.shopId': q.vendor.shopId }).select('prescription'); if (!o) return bad(s, 'Order not found', 404); s.json({ images: o.prescription || [] }); }));
 r.get('/products', wrap(async (q, s) => s.json(await Product.find(mine(q)).sort({ createdAt: -1 }))));
 r.post('/products', wrap(async (q, s) => {
   const u = clean(q.body, true); if (u.error) return bad(s, u.error);

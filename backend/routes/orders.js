@@ -1,4 +1,4 @@
-import { Router } from 'express'; import mongoose from 'mongoose'; import { Order, Product, Setting } from '../models/index.js'; import { notifyOrder } from '../utils/push.js'; import { auth, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
+import { Router } from 'express'; import mongoose from 'mongoose'; import { Order, Product, Setting, Shop } from '../models/index.js'; import { notifyOrder } from '../utils/push.js'; import { auth, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
 const code = o => '#' + String(o._id).slice(-5).toUpperCase(), STATUSES = ['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'];
 const r = Router();
 r.post('/', wrap(async (q, s) => {
@@ -32,7 +32,37 @@ r.post('/', wrap(async (q, s) => {
   await notifyOrder(order); // awaited on purpose: Vercel stops the function right after the response is sent (admin + the shop owner(s) are alerted together)
   s.json(order.toObject());
 }));
-r.get('/', auth, wrap(async (q, s) => s.json(await Order.find().sort({ createdAt: -1 }))));
+
+// ---- Prescription orders (medical stores): the customer uploads / captures a prescription photo OR types the medicines. The store confirms the price on a call. ----
+const okImg = v => typeof v === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(v) && v.length <= 1000000;
+r.post('/prescription', wrap(async (q, s) => {
+  const t = (v, n) => String(v ?? '').trim().slice(0, n), b = q.body || {}, bad = m => s.status(400).json({ error: m });
+  const name = t(b.name, 100), phone = t(b.phone, 20), address = t(b.address, 400), note = t(b.note, 300), mode = b.mode === 'type' ? 'type' : 'photo';
+  if (!name || !phone || !address) return bad('Name, phone and delivery address are required');
+  if (!mongoose.isValidObjectId(b.shopId)) return bad('Medical store not found');
+  const shop = await Shop.findById(b.shopId); if (!shop || shop.active === false || !shop.medical) return bad('This store is not taking prescription orders right now.');
+  const shopId = String(shop._id); let lines = [], images = [], medicines = [];
+  if (mode === 'photo') {
+    images = (Array.isArray(b.images) ? b.images : []).slice(0, 3); if (!images.length) return bad('Please add a photo of your prescription.');
+    if (!images.every(okImg)) return bad('One of the photos is not valid or is too large. Please retake it.');
+    lines = [{ name: 'Prescription (see photo) – price to be confirmed', price: 0, qty: 1, shopId }];
+  } else {
+    medicines = (Array.isArray(b.medicines) ? b.medicines : []).map(m => ({ name: t(m?.name, 120), qty: Math.floor(Number(m?.qty)) })).filter(m => m.name).slice(0, 30);
+    if (!medicines.length) return bad('Please type at least one medicine name.'); if (medicines.some(m => !(m.qty >= 1 && m.qty <= 99))) return bad('Quantity must be between 1 and 99.');
+    lines = medicines.map(m => ({ name: m.name, price: 0, qty: m.qty, shopId }));
+  }
+  const set = (await Setting.findOne())?.toObject() || {}, fee = Number(set.deliveryFee ?? 100), delivery = Number.isFinite(fee) && fee >= 0 ? fee : 100;
+  const riderOn = set.riderOnlineEnabled !== false, codOn = set.codEnabled !== false || !riderOn; // prices are not known yet, so advance payment is not offered for prescriptions
+  const method = b.paymentMethod === 'rider_online' && riderOn ? 'rider_online' : codOn ? 'cod' : 'rider_online';
+  const lat = Number(b.lat), lng = Number(b.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
+  const order = await Order.create({ name, phone, address, note, items: lines, subtotal: 0, delivery, total: delivery, paymentMethod: method, paymentStatus: 'Unpaid', kind: 'prescription', rxShopId: shopId, rxMode: mode, prescription: images, medicines, ...geo });
+  await logAction({ actor: 'Customer (' + phone + ')' }, { entity: 'Order', summary: `New prescription order ${code(order)} from ${name} for "${shop.name}" (${mode === 'photo' ? images.length + ' photo(s)' : medicines.length + ' medicine(s) typed'})` });
+  await notifyOrder(order);
+  const o = order.toObject(); delete o.prescription; s.json({ ...o, hasRx: images.length > 0 });
+}));
+// Admin: the prescription photos of one order (kept out of the big order list so that stays fast)
+r.get('/:id/prescription', auth, wrap(async (q, s) => { if (!mongoose.isValidObjectId(q.params.id)) return s.status(404).json({ error: 'Order not found' }); const o = await Order.findById(q.params.id).select('prescription'); if (!o) return s.status(404).json({ error: 'Order not found' }); s.json({ images: o.prescription || [] }); }));
+r.get('/', auth, wrap(async (q, s) => { const [rows, withRx] = await Promise.all([Order.find().select('-prescription').sort({ createdAt: -1 }).lean(), Order.find({ 'prescription.0': { $exists: true } }).select('_id').lean()]), has = new Set(withRx.map(x => String(x._id))); s.json(rows.map(o => ({ ...o, hasRx: has.has(String(o._id)) }))); }));
 // Admin can edit every part of an order (customer details, location, items, delivery charges, total, payment)
 r.put('/:id', auth, wrap(async (q, s) => {
   const o = await Order.findById(q.params.id); if (!o) return s.status(404).json({ error: 'Order not found' });
@@ -70,6 +100,6 @@ r.post('/:id/cancel', wrap(async (q, s) => {
 }));
 r.post('/lookup', wrap(async (q, s) => {
   const ids = (q.body.ids || []).filter(i => mongoose.isValidObjectId(i)).slice(0, 30);
-  s.json(await Order.find({ _id: { $in: ids } }).sort({ createdAt: -1 }));
+  s.json(await Order.find({ _id: { $in: ids } }).select('-prescription').sort({ createdAt: -1 }));
 }));
 export default r;
