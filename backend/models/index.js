@@ -3,7 +3,7 @@ const { Schema, model } = mongoose;
 const mk = (n, f) => model(n, new Schema(f, { timestamps: true }));
 // role: 'admin' (the platform owner; old accounts without a role count as admin) or 'vendor' (a shop owner, tied to one shop by shopId)
 export const Admin = mk('Admin', { email: String, password: String, role: { type: String, default: 'admin' }, shopId: String });
-export const Shop = mk('Shop', { name: String, phone: String, image: { type: String, default: '' }, medical: { type: Boolean, default: false }, active: { type: Boolean, default: true } });
+export const Shop = mk('Shop', { name: String, phone: String, image: { type: String, default: '' }, medical: { type: Boolean, default: false }, category: { type: String, default: '' }, active: { type: Boolean, default: true } });
 export const Banner = mk('Banner', { title: String, subtitle: String, image: String, showText: { type: Boolean, default: false }, sort: { type: Number, default: 0 }, active: { type: Boolean, default: true } });
 export const Product = mk('Product', { name: String, category: String, price: Number, unit: String, image: String, description: String, shopId: { type: String, default: '' }, section: { type: String, default: '' }, options: { type: [{ label: String, price: Number, _id: false }], default: [] }, flavors: { type: [String], default: [] }, oldPrice: Number, bestSeller: { type: Boolean, default: false }, hotDeal: { type: Boolean, default: false }, available: { type: Boolean, default: true } });
 export const Review = mk('Review', { name: String, rating: { type: Number, default: 5 }, text: String });

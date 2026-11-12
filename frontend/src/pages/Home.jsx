@@ -75,7 +75,7 @@ export default function Home() {
   const section = (title, action, onAction, body, cls = '') => <section className={cls}><div className="sh"><h3>{title}</h3>{action && <button onClick={onAction}>{action}</button>}</div>{body}</section>;
   const avail = products.filter(p => p.available !== false);
   const shopOf = id => shops.find(x => String(x._id) === String(id)), PAL = ['#00c27a,#18b5d8', '#8b5cf6,#ff4f9a', '#ff8a3d,#ff4f9a', '#18b5d8,#8b5cf6', '#00c27a,#8bc34a', '#ff4f9a,#8b5cf6'];
-  const shopsWith = shops.map((x, i) => ({ ...x, pal: PAL[i % PAL.length], items: avail.filter(p => String(p.shopId) === String(x._id)) })).map(x => ({ ...x, med: !!x.medical || (x.items.length > 0 && x.items.every(p => p.category === 'medical')) }));
+  const shopsWith = shops.map((x, i) => ({ ...x, pal: PAL[i % PAL.length], items: avail.filter(p => String(p.shopId) === String(x._id)) })).map(x => ({ ...x, med: !!x.medical || x.category === 'medical' || (x.items.length > 0 && x.items.every(p => p.category === 'medical')) }));
   const av = (x, cls = '') => <span className={'shav ' + cls} style={{ background: `linear-gradient(135deg,${x.pal})` }}>{x.image ? <img src={x.image} alt={x.name} loading="lazy" /> : (x.name || '?').trim().slice(0, 1).toUpperCase()}</span>;
   const shopCard = x => <button key={x._id} className="shopc" onClick={() => nav('shop', { s: x._id })}>{av(x, 'xl')}<b>{x.name}</b><small>{x.items.length} item{x.items.length === 1 ? '' : 's'} · {[...new Set(x.items.map(p => emojiOf(p.category)).filter(Boolean))].slice(0, 4).join(' ')}</small>{x.med && <i className="rxtag">℞ Upload prescription</i>}<em>Open menu ›</em></button>;
   const best = avail.filter(p => p.bestSeller).length ? avail.filter(p => p.bestSeller) : avail.slice(0, 8), hot = avail.filter(p => p.hotDeal);
@@ -84,7 +84,7 @@ export default function Home() {
   const needle = q.trim().toLowerCase(), found = needle ? avail.filter(p => (p.name + ' ' + (p.description || '') + ' ' + (list.find(c => c.key === p.category)?.name || '')).toLowerCase().includes(needle)) : [];
 
   const selCat = sel === 'all' ? null : list.find(c => c.key === sel), arcItems = [{ key: 'all', name: 'All', emoji: '✨' }, ...list.map(c => ({ key: c.key, name: c.name, emoji: c.emoji, image: c.image }))];
-  const inCat = (x, k) => k === 'all' || x.items.some(p => p.category === k), homeStores = shopsWith.filter(x => inCat(x, sel));
+  const inCat = (x, k) => k === 'all' || x.category === k || x.items.some(p => p.category === k), homeStores = shopsWith.filter(x => inCat(x, sel));
   const foundStores = needle ? shopsWith.filter(x => x.name.toLowerCase().includes(needle)) : [], foundItems = needle ? found : [], searchItems = needle ? found : avail;
   let ours = avail;
 

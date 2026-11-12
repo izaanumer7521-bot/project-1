@@ -40,7 +40,7 @@ r.post('/prescription', wrap(async (q, s) => {
   const name = t(b.name, 100), phone = t(b.phone, 20), address = t(b.address, 400), note = t(b.note, 300), mode = b.mode === 'type' ? 'type' : 'photo';
   if (!name || !phone || !address) return bad('Name, phone and delivery address are required');
   if (!mongoose.isValidObjectId(b.shopId)) return bad('Medical store not found');
-  const shop = await Shop.findById(b.shopId); if (!shop || shop.active === false || !shop.medical) return bad('This store is not taking prescription orders right now.');
+  const shop = await Shop.findById(b.shopId); if (!shop || shop.active === false || !(shop.medical || shop.category === 'medical')) return bad('This store is not taking prescription orders right now.');
   const shopId = String(shop._id); let lines = [], images = [], medicines = [];
   if (mode === 'photo') {
     images = (Array.isArray(b.images) ? b.images : []).slice(0, 3); if (!images.length) return bad('Please add a photo of your prescription.');
