@@ -1,19 +1,22 @@
 // Platform admin only: create and manage vendor shops and their logins
 import { Router } from 'express'; import bcrypt from 'bcryptjs'; import mongoose from 'mongoose';
 import { Admin, Shop, Product, AdminSubscription } from '../models/index.js'; import { auth, wrap } from '../middleware/auth.js'; import { logAction } from '../utils/log.js'; import { liteImage, PUBLIC_CACHE } from '../utils/lite.js';
+// A store can sit in several categories. `categories` is the list; the old single `category` is still read so existing shops keep working.
+const allCats = x => [...new Set([...(x.categories || []), x.category].filter(Boolean))];
+const pickCats = v => [...new Set((Array.isArray(v) ? v : []).map(c => String(c ?? '').trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
 const r = Router(), bad = (s, m, c = 400) => s.status(c).json({ error: m }), t = (v, n) => String(v ?? '').trim().slice(0, n), okEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e), img = v => { v = String(v || ''); return v.length <= 900000 && (v.startsWith('data:image/') || /^https?:\/\//.test(v)) ? v : ''; };
 // Public: active vendor shops for the customer home page (no login, no private fields)
-r.get('/public', wrap(async (q, s) => { s.set('Cache-Control', PUBLIC_CACHE); const [shops, counts] = await Promise.all([Shop.find({ active: { $ne: false } }).sort({ createdAt: -1 }).lean(), Product.aggregate([{ $match: { shopId: { $ne: '' }, available: { $ne: false } } }, { $group: { _id: '$shopId', n: { $sum: 1 } } }])]); const cnt = Object.fromEntries(counts.map(c => [c._id, c.n])); s.json(shops.map(x => ({ _id: x._id, name: x.name, phone: x.phone || '', image: liteImage('shop', x).image || '', medical: !!x.medical, category: x.category || '', products: cnt[String(x._id)] || 0 }))); }));
+r.get('/public', wrap(async (q, s) => { s.set('Cache-Control', PUBLIC_CACHE); const [shops, counts] = await Promise.all([Shop.find({ active: { $ne: false } }).sort({ createdAt: -1 }).lean(), Product.aggregate([{ $match: { shopId: { $ne: '' }, available: { $ne: false } } }, { $group: { _id: '$shopId', n: { $sum: 1 } } }])]); const cnt = Object.fromEntries(counts.map(c => [c._id, c.n])); s.json(shops.map(x => ({ _id: x._id, name: x.name, phone: x.phone || '', image: liteImage('shop', x).image || '', medical: !!x.medical, typedOrder: !!x.typedOrder, categories: allCats(x), products: cnt[String(x._id)] || 0 }))); }));
 r.get('/', auth, wrap(async (q, s) => {
   const [shops, vendors, counts] = await Promise.all([Shop.find().sort({ createdAt: -1 }), Admin.find({ role: 'vendor' }), Product.aggregate([{ $match: { shopId: { $ne: '' } } }, { $group: { _id: '$shopId', n: { $sum: 1 } } }])]);
   const cnt = Object.fromEntries(counts.map(c => [c._id, c.n]));
-  s.json(shops.map(x => ({ _id: x._id, name: x.name, phone: x.phone || '', image: x.image || '', medical: !!x.medical, category: x.category || '', active: x.active !== false, email: vendors.find(v => v.shopId === String(x._id))?.email || '', products: cnt[String(x._id)] || 0, createdAt: x.createdAt })));
+  s.json(shops.map(x => ({ _id: x._id, name: x.name, phone: x.phone || '', image: x.image || '', medical: !!x.medical, typedOrder: !!x.typedOrder, categories: allCats(x), active: x.active !== false, email: vendors.find(v => v.shopId === String(x._id))?.email || '', products: cnt[String(x._id)] || 0, createdAt: x.createdAt })));
 }));
 r.post('/', auth, wrap(async (q, s) => {
   const name = t(q.body.name, 100), phone = t(q.body.phone, 30), email = t(q.body.email, 120).toLowerCase(), password = String(q.body.password || '');
   if (!name) return bad(s, 'Shop name is required'); if (!okEmail(email)) return bad(s, 'Enter a valid vendor login email'); if (password.length < 8) return bad(s, 'Password needs 8+ characters');
   if (await Admin.findOne({ email })) return bad(s, 'That email is already used by another account');
-  const shop = await Shop.create({ name, phone, image: img(q.body.image), medical: !!q.body.medical, category: t(q.body.category, 40), active: true });
+  const shop = await Shop.create({ name, phone, image: img(q.body.image), medical: !!q.body.medical, typedOrder: !!q.body.typedOrder, categories: pickCats(q.body.categories), category: pickCats(q.body.categories)[0] || '', active: true });
   try { await Admin.create({ email, password: await bcrypt.hash(password, 10), role: 'vendor', shopId: String(shop._id) }); } catch (e) { await Shop.findByIdAndDelete(shop._id); throw e; }
   await logAction(q, { entity: 'Vendor', summary: `Created vendor shop "${name}" (login: ${email})` }); s.json({ ok: true, _id: shop._id });
 }));
@@ -24,7 +27,8 @@ r.put('/:id', auth, wrap(async (q, s) => {
   if ('name' in b) { const n = t(b.name, 100); if (!n) return bad(s, 'Shop name is required'); ch('shop name', shop.name, n); shop.name = n; }
   if ('phone' in b) { ch('phone', shop.phone || '', t(b.phone, 30)); shop.phone = t(b.phone, 30); }
   if ('image' in b) { const im = img(b.image); if ((shop.image || '') !== im) changes.push({ field: 'store picture', from: shop.image ? '[photo]' : '—', to: im ? '[photo]' : '—' }); shop.image = im; }
-  if ('category' in b) { ch('category', shop.category || '', t(b.category, 40)); shop.category = t(b.category, 40); }
+  if ('categories' in b) { const c = pickCats(b.categories); ch('categories', allCats(shop).join(', '), c.join(', ')); shop.categories = c; shop.category = c[0] || ''; }
+  if ('typedOrder' in b) { ch('customers can type their order', shop.typedOrder ? 'Yes' : 'No', b.typedOrder ? 'Yes' : 'No'); shop.typedOrder = !!b.typedOrder; }
   if ('medical' in b) { ch('medical store (prescription orders)', shop.medical ? 'Yes' : 'No', b.medical ? 'Yes' : 'No'); shop.medical = !!b.medical; }
   if ('active' in b) { ch('active', shop.active !== false ? 'Yes' : 'No', b.active ? 'Yes' : 'No'); shop.active = !!b.active; }
   if (v && 'email' in b) { const e = t(b.email, 120).toLowerCase(); if (!okEmail(e)) return bad(s, 'Enter a valid vendor login email'); if (e !== v.email) { const clash = await Admin.findOne({ email: e, _id: { $ne: v._id } }); if (clash) return bad(s, 'That email is already used by another account'); ch('login email', v.email, e); v.email = e; } }

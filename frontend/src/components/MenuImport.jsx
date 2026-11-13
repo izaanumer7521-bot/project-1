@@ -23,7 +23,7 @@ export default function MenuImport() {
   const loadBatches = () => api('import/batches').then(setBatches).catch(() => {});
   useEffect(() => { api('shops').then(setShops).catch(x => setErr(x.message)); api('categories').then(d => setCats(d.map(c => [c.key, c.name]))).catch(() => {}); loadBatches(); }, []);
   const changed = fn => v => { fn(v); setPrev(null); setDone(null); setErr(''); };
-  const pickShop = id => { setShopId(id); setPrev(null); setDone(null); setErr(''); const s = shops.find(x => x._id === id); if (s?.category) setCategory(s.category); };
+  const pickShop = id => { setShopId(id); setPrev(null); setDone(null); setErr(''); const s = shops.find(x => x._id === id); if (s?.categories?.length) setCategory(s.categories[0]); };
   const body = () => ({ shopId, category, text });
 
   const check = async () => {

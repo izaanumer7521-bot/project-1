@@ -26,7 +26,8 @@ const Glyph = ({ n }) => {
 };
 
 export default function PrescriptionOrder({ shop, S, user, profile, onBack, onTrack, remember }) {
-  const [mode, setMode] = useState('photo'), [images, setImages] = useState([]), [meds, setMeds] = useState([{ name: '', qty: 1 }]), [rxNote, setRxNote] = useState('');
+  const custom = !shop.med; // not a pharmacy: typed order only (no photo), e.g. a bakery
+  const [mode, setMode] = useState(custom ? 'type' : 'photo'), [images, setImages] = useState([]), [meds, setMeds] = useState([{ name: '', qty: 1 }]), [rxNote, setRxNote] = useState('');
   const [f, setF] = useState({ name: profile ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') : '', phone: user || '', address: profile?.defaultAddress ? profile.street || '' : '' });
   const [pm, setPm] = useState('cod'), [err, setErr] = useState(''), [busy, setBusy] = useState(false), [reading, setReading] = useState(false), [zoom, setZoom] = useState(null), [done, setDone] = useState(null);
   const camRef = useRef(), galRef = useRef(), medRefs = useRef([]);
@@ -58,28 +59,28 @@ export default function PrescriptionOrder({ shop, S, user, profile, onBack, onTr
   if (done) return (
     <div className="rx rx-done">
       <div className="rx-seal"><span>℞</span><i><Glyph n="check" /></i></div>
-      <h2>Prescription received</h2>
-      <p className="rx-lead"><b>{shop.name}</b> has your {done.rxMode === 'photo' ? 'prescription' : 'medicine list'}. A pharmacist will check it and call you on <b>{done.phone}</b> to confirm availability and the price.</p>
+      <h2>{custom ? 'Order request sent' : 'Prescription received'}</h2>
+      <p className="rx-lead"><b>{shop.name}</b> has your {custom ? 'order' : done.rxMode === 'photo' ? 'prescription' : 'medicine list'}. {custom ? 'The shop' : 'A pharmacist'} will check it and call you on <b>{done.phone}</b> to confirm availability and the price.</p>
       <div className="rx-ticket"><div><small>Order</small><b>#{done._id.slice(-5).toUpperCase()}</b></div><div><small>Delivery</small><b>{rs(done.delivery)}</b></div><div><small>Pay</small><b>{done.paymentMethod === 'cod' ? 'On delivery' : 'Online to rider'}</b></div></div>
-      <ol className="rx-steps"><li className="on"><i>1</i><span><b>Received</b><small>Sent to the pharmacy</small></span></li><li><i>2</i><span><b>Pharmacist review</b><small>Checks the medicines</small></span></li><li><i>3</i><span><b>Confirmation call</b><small>Price &amp; availability</small></span></li><li><i>4</i><span><b>Delivered to your door</b><small>Pay when it arrives</small></span></li></ol>
+      <ol className="rx-steps"><li className="on"><i>1</i><span><b>Received</b><small>Sent to the pharmacy</small></span></li><li><i>2</i><span><b>{custom ? 'Shop review' : 'Pharmacist review'}</b><small>{custom ? 'Checks your order' : 'Checks the medicines'}</small></span></li><li><i>3</i><span><b>Confirmation call</b><small>Price &amp; availability</small></span></li><li><i>4</i><span><b>Delivered to your door</b><small>Pay when it arrives</small></span></li></ol>
       <div className="rx-actions"><button className="btn big" onClick={onTrack}>Track my order</button><button className="btn big ghost" onClick={onBack}>Back to store</button></div>
     </div>);
 
   return (
     <form className="rx" onSubmit={submit} noValidate>
       <section className="rx-hero">
-        <span className="rx-mark" aria-hidden="true">℞</span>
-        <small>Prescription order</small>
-        <h2>Order medicines from <em>{shop.name}</em></h2>
-        <p>Share your prescription or type what you need. The pharmacist confirms the price on a quick call.</p>
-        <ul><li><Glyph n="lock" /> Private</li><li><Glyph n="shield" /> Pharmacist checked</li><li><Glyph n="truck" /> Home delivery</li></ul>
+        <span className="rx-mark" aria-hidden="true">{custom ? '✎' : '℞'}</span>
+        <small>{custom ? 'Custom order' : 'Prescription order'}</small>
+        <h2>{custom ? <>Tell <em>{shop.name}</em> what you want</> : <>Order medicines from <em>{shop.name}</em></>}</h2>
+        <p>{custom ? 'Type the items you want and your address. The shop will call you to confirm the price.' : 'Share your prescription or type what you need. The pharmacist confirms the price on a quick call.'}</p>
+        <ul>{custom ? <><li><Glyph n="pen" /> Made your way</li><li><Glyph n="truck" /> Home delivery</li></> : <><li><Glyph n="lock" /> Private</li><li><Glyph n="shield" /> Pharmacist checked</li><li><Glyph n="truck" /> Home delivery</li></>}</ul>
       </section>
 
-      <div className="rx-seg" data-pos={mode === 'photo' ? 0 : 1} role="tablist" aria-label="How do you want to order?">
+      {!custom && <div className="rx-seg" data-pos={mode === 'photo' ? 0 : 1} role="tablist" aria-label="How do you want to order?">
         <button type="button" role="tab" aria-selected={mode === 'photo'} onClick={() => { setMode('photo'); setErr(''); }}><Glyph n="cam" />Upload prescription</button>
         <button type="button" role="tab" aria-selected={mode === 'type'} onClick={() => { setMode('type'); setErr(''); }}><Glyph n="pen" />Type medicines</button>
         <i aria-hidden="true" />
-      </div>
+      </div>}
 
       {mode === 'photo' ? (
         <section className="rx-card" aria-live="polite">
@@ -110,19 +111,19 @@ export default function PrescriptionOrder({ shop, S, user, profile, onBack, onTr
         </section>
       ) : (
         <section className="rx-card rx-pad">
-          <div className="rx-padh"><span>℞</span><div><b>Your medicine list</b><small>{filled.length ? filled.length + ' medicine' + (filled.length > 1 ? 's' : '') : 'Add what you need'}</small></div></div>
+          <div className="rx-padh"><span>{custom ? '✎' : '℞'}</span><div><b>{custom ? 'Your order' : 'Your medicine list'}</b><small>{filled.length ? filled.length + (custom ? ' item' : ' medicine') + (filled.length > 1 ? 's' : '') : 'Add what you need'}</small></div></div>
           <div className="rx-lines">
             {meds.map((m, i) => (
               <div className="rx-line" key={i}>
                 <i>{i + 1}</i>
-                <input ref={el => (medRefs.current[i] = el)} aria-label={'Medicine ' + (i + 1)} placeholder="Medicine name & strength" maxLength={120} value={m.name} onChange={e => setMed(i, { name: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (m.name.trim()) addMed(); } }} />
+                <input ref={el => (medRefs.current[i] = el)} aria-label={'Item ' + (i + 1)} placeholder={custom ? 'What you want, e.g. Chocolate cake 1 kg' : 'Medicine name & strength'} maxLength={120} value={m.name} onChange={e => setMed(i, { name: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (m.name.trim()) addMed(); } }} />
                 <div className="rx-qty"><button type="button" aria-label="Less" onClick={() => setMed(i, { qty: Math.max(1, m.qty - 1) })}>−</button><b>{m.qty}</b><button type="button" aria-label="More" onClick={() => setMed(i, { qty: Math.min(99, m.qty + 1) })}>+</button></div>
-                <button type="button" className="rx-del" aria-label="Remove medicine" disabled={meds.length < 2 && !m.name} onClick={() => setMeds(a => (a.length > 1 ? a.filter((_, j) => j !== i) : [{ name: '', qty: 1 }]))}><Glyph n="x" /></button>
+                <button type="button" className="rx-del" aria-label="Remove item" disabled={meds.length < 2 && !m.name} onClick={() => setMeds(a => (a.length > 1 ? a.filter((_, j) => j !== i) : [{ name: '', qty: 1 }]))}><Glyph n="x" /></button>
               </div>))}
           </div>
-          <button type="button" className="rx-addrow" disabled={meds.length >= MAX_MEDS} onClick={() => addMed()}><Glyph n="plus" />Add another medicine</button>
-          <div className="rx-quick"><small>Quick add</small><div>{QUICK.map(x => <button type="button" key={x} onClick={() => addMed(x)}>{x}</button>)}</div></div>
-          <label className="rx-f">Note for the pharmacist <em>(optional)</em><input value={rxNote} maxLength={300} placeholder="e.g. tablets only, no syrup" onChange={e => setRxNote(e.target.value)} /></label>
+          <button type="button" className="rx-addrow" disabled={meds.length >= MAX_MEDS} onClick={() => addMed()}><Glyph n="plus" />{custom ? 'Add another item' : 'Add another medicine'}</button>
+          {!custom && <div className="rx-quick"><small>Quick add</small><div>{QUICK.map(x => <button type="button" key={x} onClick={() => addMed(x)}>{x}</button>)}</div></div>}
+          <label className="rx-f">{custom ? 'Special instructions' : 'Note for the pharmacist'} <em>(optional)</em><input value={rxNote} maxLength={300} placeholder={custom ? 'e.g. write "Happy Birthday" on the cake, needed by 6 pm' : 'e.g. tablets only, no syrup'} onChange={e => setRxNote(e.target.value)} /></label>
         </section>
       )}
 
@@ -135,9 +136,9 @@ export default function PrescriptionOrder({ shop, S, user, profile, onBack, onTr
       </section>
 
       <section className="rx-sum">
-        <div><span>Medicines</span><b>Price confirmed on call</b></div>
+        <div><span>{custom ? 'Items' : 'Medicines'}</span><b>Price confirmed on call</b></div>
         <div><span>Delivery charges</span><b>{rs(fee)}</b></div>
-        <p>You only pay once the pharmacist has confirmed the price with you. {!(codOn && riderOn) && (codOn ? 'Payment: cash on delivery.' : 'Payment: online to the rider.')}</p>
+        <p>{custom ? 'You only pay once the shop has confirmed the price with you.' : 'You only pay once the pharmacist has confirmed the price with you.'} {!(codOn && riderOn) && (codOn ? 'Payment: cash on delivery.' : 'Payment: online to the rider.')}</p>
       </section>
 
       {err && <p className="rx-err" role="alert">{err}</p>}

@@ -128,7 +128,7 @@ function Crud({ path, schema, base = path }) {
 function RxView({ o, prefix }) {
   const [imgs, setImgs] = useState(null), [err, setErr] = useState(''), [zoom, setZoom] = useState(null);
   const open = () => imgs ? setImgs(null) : api(`${prefix}/${o._id}/prescription`).then(d => setImgs(d.images || [])).catch(x => setErr(x.message));
-  return (<div className="rxview"><span className="rxbadge">℞ Prescription order · {o.rxMode === 'photo' ? 'photo' : 'typed list'}</span>
+  return (<div className="rxview"><span className="rxbadge">{o.kind === 'custom' ? '📝 Custom order · ' : '℞ Prescription order · '}{o.rxMode === 'photo' ? 'photo' : 'typed list'}</span>
     {o.rxMode !== 'photo' && !!o.medicines?.length && <ul className="meds">{o.medicines.map((m, i) => <li key={i}>{m.name} × {m.qty}</li>)}</ul>}
     {o.hasRx && <div><button type="button" className="ebtn" onClick={open}>{imgs ? 'Hide prescription' : '📷 View prescription'}</button></div>}
     {err && <p className="err">{err}</p>}
@@ -163,7 +163,7 @@ function OrderEditor({ o, onDone }) {
 function Orders() {
   const [rows, setRows] = useState([]), [edit, setEdit] = useState(null); const load = () => api('orders').then(setRows); useEffect(() => { load(); }, []);
   return (<div className="list">{rows.map(o => <div key={o._id} className="card"><b>{o.name} · {o.phone}</b><small className="when">#{o._id.slice(-5).toUpperCase()} · {dt(o.createdAt)}</small><p>{o.address}{o.note && ` (${o.note})`}{o.lat != null && o.lng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${o.lat},${o.lng}`}>map</a></>}</p>
-    {o.kind === 'prescription' && <RxView o={o} prefix="orders" />}
+    {(o.kind === 'prescription' || o.kind === 'custom') && <RxView o={o} prefix="orders" />}
     <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>{rs(o.total)}</b>{o.delivery != null && <small> (incl. {rs(o.delivery)} delivery)</small>}</p>
     <p><span className={'pill ' + (o.paymentStatus === 'Paid' ? 'ok' : o.paymentMethod === 'advance' ? 'warn' : '')}>{PAY[o.paymentMethod || 'cod']} · {o.paymentStatus || 'Unpaid'}</span>{o.paymentRef && <small> TID: {o.paymentRef}{o.paymentAccount && ' → ' + o.paymentAccount}</small>}</p>
     {edit === o._id ? <OrderEditor o={o} onDone={ch => { setEdit(null); ch && load(); }} /> : <>
@@ -187,21 +187,22 @@ function Account({ email, setEmail }) {
     {m && <p className="err">{m}</p>}<button className="btn">Save changes</button></form>);
 }
 function Shops() {
-  const blank = { name: '', image: '', phone: '', email: '', password: '', medical: false, category: '', active: true }, [cats, setCats] = useState([]), [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [ok, setOk] = useState('');
+  const blank = { name: '', image: '', phone: '', email: '', password: '', medical: false, typedOrder: false, categories: [], active: true }, [cats, setCats] = useState([]), [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [ok, setOk] = useState('');
   const load = () => api('shops').then(setRows).catch(x => setErr(x.message)); useEffect(() => { load(); api('categories').then(d => setCats(d.map(c => [c.key, c.name]))).catch(() => {}); }, []);
   const save = async e => { e.preventDefault(); setErr(''); setOk(''); try { f._id ? await api('shops/' + f._id, 'PUT', f) : await api('shops', 'POST', f); setOk(f._id ? 'Saved.' : 'Vendor created. Give them the email and password: they sign in at the same /bd-admin page and only see their own products.'); setF(blank); load(); } catch (x) { setErr(x.message); } };
   return (<div className="two"><form className="card" onSubmit={save}><h3>{f._id ? 'Edit vendor' : 'Add vendor shop'}</h3>
     <label>Shop name<input required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></label>
     <label>Store picture / logo (shown on the home page instead of the first letter)<ImageInput value={f.image} max={500} onChange={v => setF({ ...f, image: v })} /></label>
-    <label>Category (the store shows under this category even with no products)<select value={f.category || ''} onChange={e => setF({ ...f, category: e.target.value })}><option value="">No category (use its products)</option>{cats.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
+    <div className="catpick"><span>Categories (tick one or more. The store shows under each, even with no products)</span><div>{cats.map(([k, n]) => { const on = (f.categories || []).includes(k); return <label key={k} className={on ? 'on' : ''}><input type="checkbox" checked={on} onChange={e => setF({ ...f, categories: e.target.checked ? [...(f.categories || []), k] : (f.categories || []).filter(x => x !== k) })} />{n}</label>; })}</div></div>
     <label>Shop phone (optional)<input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></label>
     <label>Vendor login email<input type="email" required value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></label>
     <label>{f._id ? 'New password (leave empty to keep)' : 'Password (8+ characters)'}<input autoComplete="off" required={!f._id} minLength={f._id && !f.password ? 0 : 8} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></label>
     <label>Medical store: customers can upload a prescription or type medicines (tick for pharmacies)<input type="checkbox" checked={!!f.medical} onChange={e => setF({ ...f, medical: e.target.checked })} /></label>
+    <label>Typed orders: customers can type what they want, no photo (good for bakeries)<input type="checkbox" checked={!!f.typedOrder} onChange={e => setF({ ...f, typedOrder: e.target.checked })} /></label>
     {f._id && <label>Shop is active (untick to block login and alerts)<input type="checkbox" checked={!!f.active} onChange={e => setF({ ...f, active: e.target.checked })} /></label>}
     {err && <p className="err">{err}</p>}{ok && <p className="okmsg">{ok}</p>}<button className="btn">{f._id ? 'Save' : 'Create vendor'}</button>{f._id && <button type="button" className="btn ghost" onClick={() => setF(blank)}>Cancel</button>}</form>
-    <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : <em>🏪</em>}<span><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.active ? '🟢 Active' : '🔴 Disabled'}{r.medical && ' · ℞ Medical store'}</small></span></div>
-      <div><button className="ebtn" onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, image: r.image || '', phone: r.phone, email: r.email, password: '', medical: !!r.medical, category: r.category || '', active: r.active }); }}>Edit</button>
+    <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : <em>🏪</em>}<span><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.active ? '🟢 Active' : '🔴 Disabled'}{r.medical && ' · ℞ Medical store'}{!r.medical && r.typedOrder && ' · 📝 Typed orders'}{r.categories?.length > 0 && ' · ' + r.categories.map(k => cats.find(c => c[0] === k)?.[1] || k).join(', ')}</small></span></div>
+      <div><button className="ebtn" onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, image: r.image || '', phone: r.phone, email: r.email, password: '', medical: !!r.medical, typedOrder: !!r.typedOrder, categories: r.categories || [], active: r.active }); }}>Edit</button>
         <button className="dbtn" onClick={async () => { if (confirm(`Delete "${r.name}" and its login? Its products stay but are set out of stock.`)) { await api('shops/' + r._id, 'DELETE'); load(); } }}>Delete</button></div></div>)}{!rows.length && <p>No vendors yet. Add your first shop.</p>}</div></div>);
 }
 function VendorOrders() {
@@ -211,9 +212,9 @@ function VendorOrders() {
   return (<div><div className="row" style={{ marginBottom: 10 }}><button className="btn ghost" onClick={load}>Refresh</button><small className="muted2">Updates by itself every 30 seconds</small></div>
     {err && <p className="err">{err}</p>}{!rows && !err && <p>Loading…</p>}
     <div className="list">{rows && rows.map(o => <div key={o._id} className="card"><div className="row2"><b>Order #{o.code}</b><span className={'pill ' + (col[o.status] || '')}>{o.status}</span></div><small className="when">{dt(o.createdAt)} · Customer: {o.customer}</small>
-      {o.kind === 'prescription' && <RxView o={{ ...o, medicines: [] }} prefix="vendor/orders" />}{o.kind === 'prescription' && o.rxNote && <p><small>Note: {o.rxNote}</small></p>}
+      {(o.kind === 'prescription' || o.kind === 'custom') && <RxView o={{ ...o, medicines: [] }} prefix="vendor/orders" />}{(o.kind === 'prescription' || o.kind === 'custom') && o.rxNote && <p><small>Note: {o.rxNote}</small></p>}
       <div style={{ marginTop: 8 }}>{o.items.map((i, k) => <div key={k} className="row2"><span>{i.name} <small>× {i.qty} @ {rs(i.price)}</small></span><b>{rs(i.price * i.qty)}</b></div>)}</div>
-      {o.kind === 'prescription' ? <div className="row2" style={{ borderBottom: 0 }}><b>Price to be confirmed with the customer</b></div> : <div className="row2" style={{ borderBottom: 0 }}><b>Your items total</b><b>{rs(o.subtotal)}</b></div>}</div>)}
+      {(o.kind === 'prescription' || o.kind === 'custom') ? <div className="row2" style={{ borderBottom: 0 }}><b>Price to be confirmed with the customer</b></div> : <div className="row2" style={{ borderBottom: 0 }}><b>Your items total</b><b>{rs(o.subtotal)}</b></div>}</div>)}
       {rows && !rows.length && <p>No orders for your products yet. You will get a phone alert when one comes in.</p>}</div></div>);
 }
 function VendorAccount() {

@@ -40,7 +40,10 @@ r.post('/prescription', wrap(async (q, s) => {
   const name = t(b.name, 100), phone = t(b.phone, 20), address = t(b.address, 400), note = t(b.note, 300), mode = b.mode === 'type' ? 'type' : 'photo';
   if (!name || !phone || !address) return bad('Name, phone and delivery address are required');
   if (!mongoose.isValidObjectId(b.shopId)) return bad('Medical store not found');
-  const shop = await Shop.findById(b.shopId); if (!shop || shop.active === false || !(shop.medical || shop.category === 'medical')) return bad('This store is not taking prescription orders right now.');
+  const shop = await Shop.findById(b.shopId); let med = !!shop && (shop.medical || shop.category === 'medical' || (shop.categories || []).includes('medical'));
+  if (shop && !med && !shop.typedOrder) { const sid = String(shop._id); med = (await Product.countDocuments({ shopId: sid })) > 0 && (await Product.countDocuments({ shopId: sid, category: { $ne: 'medical' } })) === 0; } // a store whose products are all medicines counts as a medical store
+  if (!shop || shop.active === false || !(med || shop.typedOrder)) return bad('This store is not taking typed orders right now.');
+  if (!med && mode === 'photo') return bad('This store takes typed orders only.');
   const shopId = String(shop._id); let lines = [], images = [], medicines = [];
   if (mode === 'photo') {
     images = (Array.isArray(b.images) ? b.images : []).slice(0, 3); if (!images.length) return bad('Please add a photo of your prescription.');
@@ -55,8 +58,8 @@ r.post('/prescription', wrap(async (q, s) => {
   const riderOn = set.riderOnlineEnabled !== false, codOn = set.codEnabled !== false || !riderOn; // prices are not known yet, so advance payment is not offered for prescriptions
   const method = b.paymentMethod === 'rider_online' && riderOn ? 'rider_online' : codOn ? 'cod' : 'rider_online';
   const lat = Number(b.lat), lng = Number(b.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
-  const order = await Order.create({ name, phone, address, note, items: lines, subtotal: 0, delivery, total: delivery, paymentMethod: method, paymentStatus: 'Unpaid', kind: 'prescription', rxShopId: shopId, rxMode: mode, prescription: images, medicines, ...geo });
-  await logAction({ actor: 'Customer (' + phone + ')' }, { entity: 'Order', summary: `New prescription order ${code(order)} from ${name} for "${shop.name}" (${mode === 'photo' ? images.length + ' photo(s)' : medicines.length + ' medicine(s) typed'})` });
+  const order = await Order.create({ name, phone, address, note, items: lines, subtotal: 0, delivery, total: delivery, paymentMethod: method, paymentStatus: 'Unpaid', kind: med ? 'prescription' : 'custom', rxShopId: shopId, rxMode: mode, prescription: images, medicines, ...geo });
+  await logAction({ actor: 'Customer (' + phone + ')' }, { entity: 'Order', summary: `New ${med ? 'prescription' : 'custom'} order ${code(order)} from ${name} for "${shop.name}" (${mode === 'photo' ? images.length + ' photo(s)' : medicines.length + ' medicine(s) typed'})` });
   await notifyOrder(order);
   const o = order.toObject(); delete o.prescription; s.json({ ...o, hasRx: images.length > 0 });
 }));
