@@ -67,3 +67,22 @@
 .flchips{display:flex;flex-wrap:wrap;gap:6px}
 .flchips span{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border-radius:999px;font-weight:700;font-size:.82rem;background:var(--grad);color:#fff}
 .flchips span button{border:0;border-radius:50%;width:20px;height:20px;line-height:20px;padding:0;cursor:pointer;background:#ffffff40;color:#fff;font-size:.7rem}
+
+/* ===== Order card: clean bill + "cancelled by" banner (admin + vendor) ===== */
+.pill.bad{background:color-mix(in srgb,#ff5a6e 18%,var(--surface));color:#ff5a6e;border-color:#ff5a6e66}
+.adm .ohead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.adm .ohead b{font-size:1.05rem;color:var(--ink)}
+.adm .ophone{display:inline-block;margin:4px 0 2px;font-weight:700;color:var(--c1);text-decoration:none}
+.adm .ocard2.cancelled{border-color:#ff5a6e66}
+.cxl{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;margin:8px 0;padding:8px 12px;border-radius:10px;background:color-mix(in srgb,#ff5a6e 14%,var(--surface));border:1px solid #ff5a6e66;color:#ff5a6e}
+.cxl.bycust{background:color-mix(in srgb,#ff5a6e 22%,var(--surface));border-color:#ff5a6e}
+.cxl b{font-weight:800}.cxl small{color:var(--muted)}
+.obill{margin:10px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--soft);font-size:.92rem}
+.obill>div{display:grid;grid-template-columns:1fr 44px auto;gap:8px;padding:8px 12px;align-items:baseline}
+.obill>div span:last-child{text-align:right;white-space:nowrap}
+.obill .oh{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:color-mix(in srgb,var(--c1) 8%,var(--surface));font-weight:700}
+.obill .oi{border-top:1px solid var(--line);color:var(--ink)}
+.obill .os{border-top:1px solid var(--line);color:var(--muted)}
+.obill .ot{border-top:2px solid var(--line);font-weight:800;font-size:1rem;color:var(--ink)}
+.obill .ot span:last-child{color:var(--c1)}
+.obill small{display:block;padding:6px 12px 10px}

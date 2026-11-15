@@ -53,6 +53,8 @@ export default function Home() {
   const install = async () => { if (inst) { inst.prompt(); await inst.userChoice; setInst(null); } else setHelp(true); };
   const order = async e => {
     e.preventDefault(); setMsg('');
+    if (!(user || f.phone || '').trim()) return setMsg('Phone number is required. Please enter your phone number to place the order.');
+    if (!/^\+?\d{10,15}$/.test(String(user || f.phone).replace(/[\s\-()]/g, ''))) return setMsg('Please enter a valid phone number (for example 03001234567).');
     if (method === 'advance' && !pay.ref.trim()) return setMsg('Please send the payment first, then enter your transaction ID.');
     setBusy(true);
     try { const d = await api('orders', 'POST', { ...f, paymentMethod: method, paymentRef: pay.ref, paymentAccount: pay.account || (accts[0] ? accts[0].provider : ''), phone: user || f.phone, items: items.map(({ _id, name, qty, option, flavor }) => ({ _id, name, qty, option: option || '', flavor: flavor || '' })), ...(profile?.lat != null && f.address.trim() === (profile.street || '').trim() ? { lat: profile.lat, lng: profile.lng } : {}) });
@@ -136,7 +138,7 @@ export default function Home() {
       <button type="button" className="clearcart" onClick={() => confirm('Remove everything from your cart?') && setCart({})}>Clear cart</button>
       <form className="checkout" onSubmit={order}><div className="sumbox"><div><span>Subtotal</span><b>{rs(total)}</b></div><div><span>Delivery charges</span><b>{rs(fee)}</b></div><div className="grand"><span>Total</span><b>{rs(grand)}</b></div></div>
         <input required placeholder="Your name" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
-        <input required inputMode="tel" placeholder="Phone number" value={user || f.phone || ''} readOnly={!!user} onChange={e => setF({ ...f, phone: e.target.value })} />
+        <input required inputMode="tel" autoComplete="tel" minLength={10} placeholder="Phone number (required)" value={user || f.phone || ''} readOnly={!!user} onChange={e => setF({ ...f, phone: e.target.value })} />
         <textarea required placeholder="Delivery address" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} />
         <input placeholder="Note (optional)" value={f.note} onChange={e => setF({ ...f, note: e.target.value })} />
         <div className="paybox"><b>Payment method</b>

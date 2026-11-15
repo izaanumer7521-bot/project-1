@@ -160,11 +160,28 @@ function OrderEditor({ o, onDone }) {
     {inp('paymentAccount', 'Paid to (account)')}
     {err && <p className="err">{err}</p>}<div className="row"><button className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save order'}</button><button type="button" className="btn ghost" onClick={() => onDone(false)}>Cancel</button></div></form>);
 }
+// Cancelled orders: says clearly WHO cancelled (customer / admin) and when
+function CancelBanner({ o }) {
+  if (o.status !== 'Cancelled') return null;
+  const who = o.cancelledBy === 'Customer' ? 'the customer' : o.cancelledBy === 'Admin' ? 'admin' : '';
+  return (<div className={'cxl' + (o.cancelledBy === 'Customer' ? ' bycust' : '')}><b>❌ {who ? 'Cancelled by ' + who : 'Order cancelled'}</b>{o.cancelledAt && <small>{dt(o.cancelledAt)}</small>}</div>);
+}
+// Order items as a clean bill: item, qty, price, then subtotal / delivery / total
+function OrderBill({ o }) {
+  const open = !o.subtotal && (o.kind === 'prescription' || o.kind === 'custom'), sub = o.subtotal != null ? o.subtotal : o.items.reduce((x, i) => x + i.price * i.qty, 0);
+  return (<div className="obill"><div className="oh"><span>Item</span><span>Qty</span><span>Price</span></div>
+    {o.items.map((i, k) => <div key={k} className="oi"><span>{i.name}</span><span>×{i.qty}</span><span>{open ? '—' : rs(i.price * i.qty)}</span></div>)}
+    {open ? <div className="ot"><span>Delivery</span><span /><span>{rs(o.delivery)}</span></div> : <>
+      <div className="os"><span>Subtotal</span><span /><span>{rs(sub)}</span></div>
+      {o.delivery != null && <div className="os"><span>Delivery</span><span /><span>{rs(o.delivery)}</span></div>}
+      <div className="ot"><span>Total</span><span /><span>{rs(o.total)}</span></div></>}
+    {open && <small className="muted">Item prices are confirmed by phone with the customer.</small>}</div>);
+}
 function Orders() {
   const [rows, setRows] = useState([]), [edit, setEdit] = useState(null); const load = () => api('orders').then(setRows); useEffect(() => { load(); }, []);
-  return (<div className="list">{rows.map(o => <div key={o._id} className="card"><b>{o.name} · {o.phone}</b><small className="when">#{o._id.slice(-5).toUpperCase()} · {dt(o.createdAt)}</small><p>{o.address}{o.note && ` (${o.note})`}{o.lat != null && o.lng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${o.lat},${o.lng}`}>map</a></>}</p>
+  return (<div className="list">{rows.map(o => <div key={o._id} className={'card ocard2' + (o.status === 'Cancelled' ? ' cancelled' : '')}><div className="ohead"><b>{o.name}</b><span className={'pill ' + (o.status === 'Delivered' ? 'ok' : o.status === 'Cancelled' ? 'bad' : o.status === 'New' ? 'warn' : '')}>{o.status || 'New'}</span></div><a className="ophone" href={`tel:${o.phone}`}>📞 {o.phone}</a><small className="when">Order #{o._id.slice(-5).toUpperCase()} · {dt(o.createdAt)}</small><CancelBanner o={o} /><p>{o.address}{o.note && ` (${o.note})`}{o.lat != null && o.lng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${o.lat},${o.lng}`}>map</a></>}</p>
     {(o.kind === 'prescription' || o.kind === 'custom') && <RxView o={o} prefix="orders" />}
-    <p>{o.items.map(i => `${i.name} ×${i.qty}`).join(', ')} — <b>{rs(o.total)}</b>{o.delivery != null && <small> (incl. {rs(o.delivery)} delivery)</small>}</p>
+    <OrderBill o={o} />
     <p><span className={'pill ' + (o.paymentStatus === 'Paid' ? 'ok' : o.paymentMethod === 'advance' ? 'warn' : '')}>{PAY[o.paymentMethod || 'cod']} · {o.paymentStatus || 'Unpaid'}</span>{o.paymentRef && <small> TID: {o.paymentRef}{o.paymentAccount && ' → ' + o.paymentAccount}</small>}</p>
     {edit === o._id ? <OrderEditor o={o} onDone={ch => { setEdit(null); ch && load(); }} /> : <>
       <button className="ebtn" onClick={() => setEdit(o._id)}>Edit order</button>
@@ -208,10 +225,10 @@ function Shops() {
 function VendorOrders() {
   const [rows, setRows] = useState(null), [err, setErr] = useState(''), load = () => api('vendor/orders').then(d => { setRows(d); setErr(''); }).catch(x => setErr(x.message));
   useEffect(() => { load(); const id = setInterval(load, 30000); return () => clearInterval(id); }, []);
-  const col = { New: 'warn', Confirmed: '', 'On the way': '', Delivered: 'ok', Cancelled: '' };
+  const col = { New: 'warn', Confirmed: '', 'On the way': '', Delivered: 'ok', Cancelled: 'bad' };
   return (<div><div className="row" style={{ marginBottom: 10 }}><button className="btn ghost" onClick={load}>Refresh</button><small className="muted2">Updates by itself every 30 seconds</small></div>
     {err && <p className="err">{err}</p>}{!rows && !err && <p>Loading…</p>}
-    <div className="list">{rows && rows.map(o => <div key={o._id} className="card"><div className="row2"><b>Order #{o.code}</b><span className={'pill ' + (col[o.status] || '')}>{o.status}</span></div><small className="when">{dt(o.createdAt)} · Customer: {o.customer}</small>
+    <div className="list">{rows && rows.map(o => <div key={o._id} className="card"><div className="row2"><b>Order #{o.code}</b><span className={'pill ' + (col[o.status] || '')}>{o.status}</span></div><small className="when">{dt(o.createdAt)} · Customer: {o.customer}</small><CancelBanner o={o} />
       {(o.kind === 'prescription' || o.kind === 'custom') && <RxView o={{ ...o, medicines: [] }} prefix="vendor/orders" />}{(o.kind === 'prescription' || o.kind === 'custom') && o.rxNote && <p><small>Note: {o.rxNote}</small></p>}
       <div style={{ marginTop: 8 }}>{o.items.map((i, k) => <div key={k} className="row2"><span>{i.name} <small>× {i.qty} @ {rs(i.price)}</small></span><b>{rs(i.price * i.qty)}</b></div>)}</div>
       {(o.kind === 'prescription' || o.kind === 'custom') ? <div className="row2" style={{ borderBottom: 0 }}><b>Price to be confirmed with the customer</b></div> : <div className="row2" style={{ borderBottom: 0 }}><b>Your items total</b><b>{rs(o.subtotal)}</b></div>}</div>)}

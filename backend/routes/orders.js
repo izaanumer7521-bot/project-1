@@ -1,9 +1,14 @@
 import { Router } from 'express'; import mongoose from 'mongoose'; import { Order, Product, Setting, Shop } from '../models/index.js'; import { notifyOrder } from '../utils/push.js'; import { auth, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
 const code = o => '#' + String(o._id).slice(-5).toUpperCase(), STATUSES = ['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'];
+// Phone number: compulsory. Spaces, dashes and brackets are removed, then 10-15 digits (an optional leading +) are required.
+export const cleanPhone = v => { const p = String(v ?? '').replace(/[\s\-()]/g, ''); return /^\+?\d{10,15}$/.test(p) ? p : ''; };
+const PHONE_ERR = 'Please enter a valid phone number (for example 03001234567). A phone number is required so our rider can contact you.';
 const r = Router();
 r.post('/', wrap(async (q, s) => {
-  const t = (v, n) => String(v ?? '').trim().slice(0, n), { items } = q.body, name = t(q.body.name, 100), phone = t(q.body.phone, 20), address = t(q.body.address, 400), note = t(q.body.note, 300);
-  if (!name || !phone || !address || !Array.isArray(items) || !items.length) return s.status(400).json({ error: 'Name, phone, address and items are required' });
+  const t = (v, n) => String(v ?? '').trim().slice(0, n), { items } = q.body, name = t(q.body.name, 100), phone = cleanPhone(q.body.phone), address = t(q.body.address, 400), note = t(q.body.note, 300);
+  if (!String(q.body.phone ?? '').trim()) return s.status(400).json({ error: 'Phone number is required. Please enter your phone number to place the order.' });
+  if (!phone) return s.status(400).json({ error: PHONE_ERR });
+  if (!name || !address || !Array.isArray(items) || !items.length) return s.status(400).json({ error: 'Name, address and items are required' });
   // Prices always come from the database, never from the browser
   const prods = await Product.find({ _id: { $in: items.map(i => i?._id).filter(id => mongoose.isValidObjectId(id)) } }), by = Object.fromEntries(prods.map(p => [String(p._id), p])), lines = [];
   for (const i of items) {
@@ -37,8 +42,10 @@ r.post('/', wrap(async (q, s) => {
 const okImg = v => typeof v === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(v) && v.length <= 1000000;
 r.post('/prescription', wrap(async (q, s) => {
   const t = (v, n) => String(v ?? '').trim().slice(0, n), b = q.body || {}, bad = m => s.status(400).json({ error: m });
-  const name = t(b.name, 100), phone = t(b.phone, 20), address = t(b.address, 400), note = t(b.note, 300), mode = b.mode === 'type' ? 'type' : 'photo';
-  if (!name || !phone || !address) return bad('Name, phone and delivery address are required');
+  const name = t(b.name, 100), phone = cleanPhone(b.phone), address = t(b.address, 400), note = t(b.note, 300), mode = b.mode === 'type' ? 'type' : 'photo';
+  if (!String(b.phone ?? '').trim()) return bad('Phone number is required. Please enter your phone number to place the order.');
+  if (!phone) return bad(PHONE_ERR);
+  if (!name || !address) return bad('Name and delivery address are required');
   if (!mongoose.isValidObjectId(b.shopId)) return bad('Medical store not found');
   const shop = await Shop.findById(b.shopId); let med = !!shop && (shop.medical || shop.category === 'medical' || (shop.categories || []).includes('medical'));
   if (shop && !med && !shop.typedOrder) { const sid = String(shop._id); med = (await Product.countDocuments({ shopId: sid })) > 0 && (await Product.countDocuments({ shopId: sid, category: { $ne: 'medical' } })) === 0; } // a store whose products are all medicines counts as a medical store
@@ -70,9 +77,12 @@ r.get('/', auth, wrap(async (q, s) => { const [rows, withRx] = await Promise.all
 r.put('/:id', auth, wrap(async (q, s) => {
   const o = await Order.findById(q.params.id); if (!o) return s.status(404).json({ error: 'Order not found' });
   const b = q.body, u = {}, t = (v, n) => String(v ?? '').trim().slice(0, n), money = v => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null; }, bad = m => s.status(400).json({ error: m });
-  for (const [k, n] of [['name', 100], ['phone', 20], ['address', 400]]) if (k in b) { u[k] = t(b[k], n); if (!u[k]) return bad(`${k[0].toUpperCase() + k.slice(1)} cannot be empty`); }
+  for (const [k, n] of [['name', 100], ['address', 400]]) if (k in b) { u[k] = t(b[k], n); if (!u[k]) return bad(`${k[0].toUpperCase() + k.slice(1)} cannot be empty`); }
+  if ('phone' in b) { u.phone = cleanPhone(b.phone); if (!u.phone) return bad(PHONE_ERR); }
   for (const [k, n] of [['note', 300], ['paymentRef', 80], ['paymentAccount', 80]]) if (k in b) u[k] = t(b[k], n);
-  if ('status' in b) { if (!STATUSES.includes(b.status)) return bad('Invalid status'); u.status = b.status; }
+  if ('status' in b) { if (!STATUSES.includes(b.status)) return bad('Invalid status'); u.status = b.status;
+    if (b.status === 'Cancelled' && o.status !== 'Cancelled') { u.cancelledBy = 'Admin'; u.cancelledAt = new Date(); }
+    if (b.status !== 'Cancelled' && o.status === 'Cancelled') { u.cancelledBy = undefined; u.cancelledAt = undefined; } }
   if ('paymentMethod' in b) { if (!['cod', 'advance', 'rider_online'].includes(b.paymentMethod)) return bad('Invalid payment method'); u.paymentMethod = b.paymentMethod; }
   if ('paymentStatus' in b) { if (!['Unpaid', 'Paid'].includes(b.paymentStatus)) return bad('Invalid payment status'); u.paymentStatus = b.paymentStatus; }
   for (const k of ['lat', 'lng']) if (k in b) { if (b[k] === '' || b[k] == null) u[k] = undefined; else { const n = Number(b[k]); if (!Number.isFinite(n)) return bad('Location must be numbers'); u[k] = n; } }
@@ -96,7 +106,7 @@ r.post('/:id/cancel', wrap(async (q, s) => {
   const o = await Order.findById(q.params.id); if (!o) return s.status(404).json({ error: 'Order not found' });
   if (o.status === 'Cancelled') return s.status(400).json({ error: 'This order is already cancelled.' });
   if (!['New', 'Confirmed'].includes(o.status)) return s.status(400).json({ error: 'This order is already on the way or delivered, so it can no longer be cancelled. Please call us.' });
-  o.status = 'Cancelled'; await o.save();
+  o.status = 'Cancelled'; o.cancelledBy = 'Customer'; o.cancelledAt = new Date(); await o.save();
   await logAction({ actor: 'Customer (' + o.phone + ')' }, { entity: 'Order', summary: `Customer cancelled order ${code(o)} (${o.name}, Rs ${o.total})` + (o.paymentStatus === 'Paid' ? ' – advance was paid, refund needed' : '') });
   await notifyOrder(o, true); // admin + the shop owner(s) of this order get a cancel alert (awaited: Vercel stops right after the response)
   s.json(o.toObject());

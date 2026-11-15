@@ -1,3 +1,4 @@
+import dns from 'node:dns'; dns.setServers(['8.8.8.8', '1.1.1.1']); // needed on this network for MongoDB Atlas
 import bcrypt from 'bcryptjs'; import { Admin, Banner, Product, Review, Category, Setting } from '../models/index.js';
 const P = [['Halwa Puri Plate','breakfast',350,'per plate','Chana, halwa, 2 puri'],['Nihari','breakfast',450,'per plate','Slow-cooked beef nihari with naan'],
 ['Aata (Flour)','grocery',1450,'10 kg','Fine chakki aata'],['Basmati Rice','grocery',520,'per kg','Premium long grain'],['Cooking Oil','grocery',600,'1 litre','Pure cooking oil'],

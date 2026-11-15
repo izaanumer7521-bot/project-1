@@ -130,7 +130,7 @@ export default function PrescriptionOrder({ shop, S, user, profile, onBack, onTr
       <section className="rx-card">
         <h3 className="rx-h"><i>2</i>Delivery details</h3>
         <label className="rx-f">Full name<input required autoComplete="name" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Your name" /></label>
-        <label className="rx-f">Phone number<input required inputMode="tel" autoComplete="tel" readOnly={!!user} value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} placeholder="03xx xxxxxxx" /></label>
+        <label className="rx-f">Phone number (required)<input required minLength={10} inputMode="tel" autoComplete="tel" readOnly={!!user} value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} placeholder="03xx xxxxxxx" /></label>
         <label className="rx-f">Delivery address<textarea required rows={2} autoComplete="street-address" value={f.address} onChange={e => setF({ ...f, address: e.target.value })} placeholder="House, street, area" /></label>
         {codOn && riderOn && <div className="rx-pay" role="radiogroup" aria-label="Payment"><button type="button" role="radio" aria-checked={pm === 'cod'} className={pm === 'cod' ? 'on' : ''} onClick={() => setPm('cod')}><b>Cash on delivery</b><small>Pay the rider in cash</small></button><button type="button" role="radio" aria-checked={pm === 'rider_online'} className={pm === 'rider_online' ? 'on' : ''} onClick={() => setPm('rider_online')}><b>Online to rider</b><small>Bank / e-wallet on arrival</small></button></div>}
       </section>
