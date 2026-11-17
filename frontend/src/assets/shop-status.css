@@ -1,0 +1,37 @@
+/* Open / closed shops: the CLOSED stamp on the store picture, greyed products, vendor switch, and the bulk picture import rows */
+.cstamp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-16deg);z-index:3;padding:5px 12px;border:3px solid #e5484d;border-radius:8px;background:#fffffff2;color:#e5484d;font:900 1.05rem/1 system-ui,sans-serif;font-style:normal;letter-spacing:.14em;white-space:nowrap;box-shadow:0 2px 12px #0005;pointer-events:none}
+.shav.xl .cstamp{font-size:1.25rem;padding:6px 14px}
+.shav.lg .cstamp{font-size:.55rem;padding:2px 5px;border-width:2px;border-radius:5px;letter-spacing:.06em}
+.shav.shut::after{content:'';position:absolute;inset:0;background:#000a;z-index:2;border-radius:inherit}
+.shav.shut img{filter:grayscale(1)}
+.shopc.shut em{color:#e5484d}
+.pc.shut .pci{opacity:.55}.pc.shut h4,.pc.shut .pr{opacity:.7}
+.closedtag{display:inline-block;background:#e5484d;color:#fff;border-radius:999px;padding:4px 11px;font-weight:800;font-size:.75rem;margin:4px}
+.pci .closedtag{position:absolute;right:6px;bottom:6px;margin:0}
+.closedbar{background:#e5484d1a;border:1.5px solid #e5484d;color:var(--ink);border-radius:14px;padding:12px 14px;margin:10px 0;line-height:1.45}
+.ci2.shut{opacity:.55}
+.shopstate{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;border-left:6px solid #00c27a}
+.shopstate.off{border-left-color:#e5484d}
+.shopstate b{display:block;font-size:1.05rem}.shopstate small{display:block;color:var(--muted);margin-top:2px}
+.btn.danger{background:#e5484d!important;color:#fff!important;box-shadow:none!important}
+.imp-pics{display:flex;flex-direction:column;gap:12px}
+.imp-pics .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.imp-chk{flex-direction:row!important;align-items:center;gap:8px!important;font-weight:600!important}
+.imp-okline{color:#00a869;font-weight:700}
+.imp-rows.pic{max-height:560px}
+.imp-pic{display:grid;grid-template-columns:56px 1fr auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);border-left:4px solid var(--c1)}
+.imp-pic img{width:56px;height:56px;object-fit:cover;border-radius:10px}
+.imp-pic .bd{display:flex;flex-direction:column;gap:5px;min-width:0}.imp-pic .bd small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imp-pic .bd select{padding:7px 8px;font-size:.85rem}
+.imp-pic .tag{font-style:normal;font-size:.7rem;font-weight:800;padding:3px 9px;border-radius:999px;background:#00c27a26;color:var(--c1);white-space:nowrap}
+.imp-pic.maybe{border-left-color:#f5a524}.imp-pic.maybe .tag{background:#f5a52430;color:#c07a00}
+.imp-pic.bad{border-left-color:#e5484d;background:#e5484d14}.imp-pic.bad .tag{background:#e5484d26;color:#e5484d}
+.imp-pic.keep{border-left-color:var(--c2)}.imp-pic.keep .tag{background:#18b5d826;color:var(--c2)}
+@media(max-width:560px){.imp-pic{grid-template-columns:48px 1fr auto}.imp-pic img{width:48px;height:48px}.imp-pic .tag{grid-column:2}}
+
+/* Mobile fix: long emails / addresses in admin lists (Customers, Vendors, Products…) wrap inside the card instead of pushing the Delete button off-screen */
+.adm main,.adm .list,.adm .two{min-width:0;max-width:100%}
+.adm .li{max-width:100%;box-sizing:border-box}
+.adm .li>div:first-child,.adm .li .lt>span{min-width:0;flex:1 1 auto;overflow-wrap:anywhere;word-break:break-word}
+.adm .li>div:last-child{flex:0 0 auto}
+@media(max-width:820px){.adm{grid-template-columns:minmax(0,1fr)!important;overflow-x:hidden}.adm .li{flex-wrap:wrap}.adm .li>div:last-child{margin-left:auto}}

@@ -54,4 +54,22 @@ r.post('/:id/undo', wrap(async (q, s) => {
   const b = mongoose.isValidObjectId(q.params.id) && await ImportBatch.findById(q.params.id); if (!b || b.undone) return bad(s, 'Import not found', 404);
   await undoBatch(b); await logAction(q, { entity: 'Product', summary: `Undid the menu import of "${b.shopName}" (${b.created.length} items removed, ${b.updated.length} restored)` }); s.json({ ok: true });
 }));
+
+// ---- Add pictures to many items at once (the admin page matches photos to items by file name, then sends them here in small batches) ----
+// Only the shop's own items can be changed, and only the picture field is touched.
+r.get('/shop-products/:id', wrap(async (q, s) => {
+  if (!mongoose.isValidObjectId(q.params.id)) return bad(s, 'Shop not found', 404);
+  const rows = await Product.find({ shopId: String(q.params.id) }).select('name section image').sort({ createdAt: 1 }).lean();
+  s.json(rows.map(p => ({ _id: p._id, name: p.name, section: p.section || '', hasImage: !!p.image })));
+}));
+const okPic = v => typeof v === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(v) && v.length <= 700000;
+r.post('/images', wrap(async (q, s) => {
+  const b = q.body || {}; if (!mongoose.isValidObjectId(b.shopId)) return bad(s, 'Choose a vendor shop'); const shop = await Shop.findById(b.shopId).select('name'); if (!shop) return bad(s, 'Shop not found', 404);
+  const items = (Array.isArray(b.items) ? b.items : []).slice(0, 25), shopId = String(shop._id), failed = []; let updated = 0;
+  for (const it of items) {
+    if (!mongoose.isValidObjectId(it?.id) || !okPic(it?.image)) { failed.push(String(it?.id || '')); continue; }
+    const res = await Product.updateOne({ _id: it.id, shopId }, { $set: { image: it.image } }); res.matchedCount ? updated++ : failed.push(String(it.id));
+  }
+  if (updated) await logAction(q, { entity: 'Product', summary: `Added pictures to ${updated} item${updated === 1 ? '' : 's'} of "${shop.name}"` }); s.json({ updated, failed });
+}));
 export default r;

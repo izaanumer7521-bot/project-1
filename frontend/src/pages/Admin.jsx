@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import MenuImport from '../components/MenuImport.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import { pushState, enablePush, disablePush, testPush } from '../utils/push.js';
+import { useEffect, useState } from 'react'; import { api, CATS } from '../utils/api.js'; import Logo from '../components/Logo.jsx'; import MenuImport from '../components/MenuImport.jsx'; import ImageImport from '../components/ImageImport.jsx'; import ThemeToggle from '../components/ThemeToggle.jsx'; import { pushState, enablePush, disablePush, testPush } from '../utils/push.js';
 const catOpts = CATS.map(c => [c[0], c[2]]);
 const SCHEMA = {
   banners: [['title', 'Title'], ['subtitle', 'Subtitle'], ['image', 'Banner image (best size 1200×600 px, keep text in the centre)', 'image', 1200], ['showText', 'Show title on top of the image', 'bool'], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
@@ -204,7 +204,7 @@ function Account({ email, setEmail }) {
     {m && <p className="err">{m}</p>}<button className="btn">Save changes</button></form>);
 }
 function Shops() {
-  const blank = { name: '', image: '', phone: '', email: '', password: '', medical: false, typedOrder: false, categories: [], active: true }, [cats, setCats] = useState([]), [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [ok, setOk] = useState('');
+  const blank = { name: '', image: '', phone: '', email: '', password: '', medical: false, typedOrder: false, categories: [], active: true, open: true }, [cats, setCats] = useState([]), [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [ok, setOk] = useState('');
   const load = () => api('shops').then(setRows).catch(x => setErr(x.message)); useEffect(() => { load(); api('categories').then(d => setCats(d.map(c => [c.key, c.name]))).catch(() => {}); }, []);
   const save = async e => { e.preventDefault(); setErr(''); setOk(''); try { f._id ? await api('shops/' + f._id, 'PUT', f) : await api('shops', 'POST', f); setOk(f._id ? 'Saved.' : 'Vendor created. Give them the email and password: they sign in at the same /bd-admin page and only see their own products.'); setF(blank); load(); } catch (x) { setErr(x.message); } };
   return (<div className="two"><form className="card" onSubmit={save}><h3>{f._id ? 'Edit vendor' : 'Add vendor shop'}</h3>
@@ -216,11 +216,21 @@ function Shops() {
     <label>{f._id ? 'New password (leave empty to keep)' : 'Password (8+ characters)'}<input autoComplete="off" required={!f._id} minLength={f._id && !f.password ? 0 : 8} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></label>
     <label>Medical store: customers can upload a prescription or type medicines (tick for pharmacies)<input type="checkbox" checked={!!f.medical} onChange={e => setF({ ...f, medical: e.target.checked })} /></label>
     <label>Typed orders: customers can type what they want, no photo (good for bakeries)<input type="checkbox" checked={!!f.typedOrder} onChange={e => setF({ ...f, typedOrder: e.target.checked })} /></label>
+    {f._id && <label>Shop is OPEN for orders (untick to CLOSE it: customers see a CLOSED stamp and cannot order)<input type="checkbox" checked={f.open !== false} onChange={e => setF({ ...f, open: e.target.checked })} /></label>}
     {f._id && <label>Shop is active (untick to block login and alerts)<input type="checkbox" checked={!!f.active} onChange={e => setF({ ...f, active: e.target.checked })} /></label>}
     {err && <p className="err">{err}</p>}{ok && <p className="okmsg">{ok}</p>}<button className="btn">{f._id ? 'Save' : 'Create vendor'}</button>{f._id && <button type="button" className="btn ghost" onClick={() => setF(blank)}>Cancel</button>}</form>
-    <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : <em>🏪</em>}<span><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.active ? '🟢 Active' : '🔴 Disabled'}{r.medical && ' · ℞ Medical store'}{!r.medical && r.typedOrder && ' · 📝 Typed orders'}{r.categories?.length > 0 && ' · ' + r.categories.map(k => cats.find(c => c[0] === k)?.[1] || k).join(', ')}</small></span></div>
-      <div><button className="ebtn" onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, image: r.image || '', phone: r.phone, email: r.email, password: '', medical: !!r.medical, typedOrder: !!r.typedOrder, categories: r.categories || [], active: r.active }); }}>Edit</button>
+    <div className="list">{rows.map(r => <div key={r._id} className="li"><div className="lt">{r.image ? <img src={r.image} alt="" /> : <em>🏪</em>}<span><b>{r.name}</b><small>{r.email} · {r.products} products{r.phone && ' · ' + r.phone}</small><small>{r.open ? '🟢 Open for orders' : '🔴 CLOSED'} · {r.active ? 'Active' : '🔴 Disabled'}{r.medical && ' · ℞ Medical store'}{!r.medical && r.typedOrder && ' · 📝 Typed orders'}{r.categories?.length > 0 && ' · ' + r.categories.map(k => cats.find(c => c[0] === k)?.[1] || k).join(', ')}</small></span></div>
+      <div><button className="ebtn" onClick={async () => { setErr(''); try { await api('shops/' + r._id, 'PUT', { open: !r.open }); load(); } catch (x) { setErr(x.message); } }}>{r.open ? '🔒 Close shop' : '🔓 Open shop'}</button><button className="ebtn" onClick={() => { setOk(''); setF({ _id: r._id, name: r.name, image: r.image || '', phone: r.phone, email: r.email, password: '', medical: !!r.medical, typedOrder: !!r.typedOrder, categories: r.categories || [], active: r.active, open: r.open !== false }); }}>Edit</button>
         <button className="dbtn" onClick={async () => { if (confirm(`Delete "${r.name}" and its login? Its products stay but are set out of stock.`)) { await api('shops/' + r._id, 'DELETE'); load(); } }}>Delete</button></div></div>)}{!rows.length && <p>No vendors yet. Add your first shop.</p>}</div></div>);
+}
+// Vendor: one big switch to open / close my own shop. Closed = customers see a CLOSED stamp and cannot order.
+function VendorShopStatus() {
+  const [open, setOpen] = useState(null), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  useEffect(() => { api('vendor/shop').then(d => setOpen(d.open)).catch(x => setErr(x.message)); }, []);
+  const flip = async () => { const next = !open; if (!next && !confirm('Close your shop? Customers will see CLOSED and nobody can order until you open it again.')) return; setBusy(true); setErr(''); try { const d = await api('vendor/shop/open', 'PUT', { open: next }); setOpen(d.open); } catch (x) { setErr(x.message); } setBusy(false); };
+  if (open === null) return err ? <p className="err">{err}</p> : null;
+  return (<div className={'shopstate card ' + (open ? 'on' : 'off')}><div><b>{open ? '🟢 Your shop is OPEN' : '🔴 Your shop is CLOSED'}</b><small>{open ? 'Customers can order from you.' : 'Customers see a CLOSED stamp and cannot order.'}</small>{err && <p className="err">{err}</p>}</div>
+    <button type="button" className={'btn ' + (open ? 'danger' : '')} disabled={busy} onClick={flip}>{busy ? 'Please wait…' : open ? 'Close shop' : 'Open shop'}</button></div>);
 }
 function VendorOrders() {
   const [rows, setRows] = useState(null), [err, setErr] = useState(''), load = () => api('vendor/orders').then(d => { setRows(d); setErr(''); }).catch(x => setErr(x.message));
@@ -242,9 +252,9 @@ function VendorAccount() {
     <label>New password (8+ characters)<input type="password" required minLength={8} value={f.newPassword} onChange={e => setF({ ...f, newPassword: e.target.value })} /></label>
     {m && <p className="err">{m}</p>}<button className="btn">Save</button></form>);
 }
-const IC = { dashboard: '📊', orders: '🧾', products: '📦', import: '📥', shops: '🏪', banners: '🖼️', categories: '🗂️', reviews: '⭐', customers: '👥', logs: '📜', settings: '⚙️', account: '🔐', vorders: '🧾', vproducts: '📦', vaccount: '🔐' };
+const IC = { dashboard: '📊', orders: '🧾', products: '📦', import: '📥', pictures: '📷', shops: '🏪', banners: '🖼️', categories: '🗂️', reviews: '⭐', customers: '👥', logs: '📜', settings: '⚙️', account: '🔐', vorders: '🧾', vproducts: '📦', vaccount: '🔐' };
 const Bar = ({ open, setOpen, title }) => <><header className="atop"><button type="button" aria-label="Menu" className={'burger' + (open ? ' x' : '')} onClick={() => setOpen(!open)}><i /><i /><i /></button><b>{title}</b><ThemeToggle /></header><div className={'scrim' + (open ? ' on' : '')} onClick={() => setOpen(false)} /></>;
-const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['import', 'Import menu'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
+const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['import', 'Import menu'], ['pictures', 'Import pictures'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
 const VENDOR_TABS = [['vorders', 'Orders'], ['vproducts', 'My products'], ['vaccount', 'Account']];
 export default function Admin() {
   const [email, setEmail] = useState(null), [role, setRole] = useState('admin'), [shopName, setShopName] = useState(''), [tab, setTab] = useState('dashboard'), [open, setOpen] = useState(false), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
@@ -259,9 +269,9 @@ export default function Admin() {
   // VENDOR: the ONLY things rendered are their own products and password. No admin component is even created for them (and the server refuses them anyway).
   if (role === 'vendor') { const t = tab === 'vaccount' || tab === 'vproducts' ? tab : 'vorders';
     return (<div className="adm"><Bar open={open} setOpen={setOpen} title={shopName} /><aside className={open ? 'open' : ''}><Logo small /><b>{shopName}</b><small>{email}</small>{VENDOR_TABS.map(([k, n]) => <button key={k} className={t === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}<div className="sidetgl"><ThemeToggle /><span>Light / Dark mode</span></div><button onClick={logout}>Log out</button></aside>
-      <main><h2>{t === 'vaccount' ? 'Account' : t === 'vproducts' ? 'My products' : 'Orders'}</h2>{t === 'vaccount' ? <VendorAccount /> : t === 'vproducts' ? <Crud key="vp" path="vproducts" schema="vendorProducts" base="vendor/products" /> : <><PushSetup /><VendorOrders /></>}</main></div>); }
+      <main><h2>{t === 'vaccount' ? 'Account' : t === 'vproducts' ? 'My products' : 'Orders'}</h2><VendorShopStatus />{t === 'vaccount' ? <VendorAccount /> : t === 'vproducts' ? <Crud key="vp" path="vproducts" schema="vendorProducts" base="vendor/products" /> : <><PushSetup /><VendorOrders /></>}</main></div>); }
   return (<div className="adm"><Bar open={open} setOpen={setOpen} title="ByDoor Admin" /><aside className={open ? 'open' : ''}><Logo small /><small>{email}</small>
     {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}
     <div className="sidetgl"><ThemeToggle /><span>Light / Dark mode</span></div><button onClick={logout}>Log out</button></aside>
-    <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'import' ? <MenuImport /> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
+    <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'import' ? <MenuImport /> : tab === 'pictures' ? <div className="imp"><ImageImport /></div> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }

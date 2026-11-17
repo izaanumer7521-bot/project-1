@@ -24,6 +24,9 @@ r.post('/', wrap(async (q, s) => {
     const tag = [opt?.label, flavor].filter(Boolean).join(', ');
     lines.push({ name: tag ? `${p.name} (${tag})` : p.name, price: opt ? opt.price : p.price, qty, shopId: p.shopId || '', ...(opt && { option: opt.label }), ...(flavor && { flavor }) });
   }
+  // A closed shop cannot take orders (the app also hides the buttons, this is the real lock)
+  const sids = [...new Set(lines.map(l => l.shopId).filter(id => mongoose.isValidObjectId(id)))], shut = sids.length ? await Shop.find({ _id: { $in: sids }, open: false }).select('name').lean() : [];
+  if (shut.length) return s.status(400).json({ error: `${shut.map(x => x.name).join(', ')} ${shut.length > 1 ? 'are' : 'is'} closed right now and cannot take orders. Please remove ${shut.length > 1 ? 'their' : 'its'} items from your cart or try again when ${shut.length > 1 ? 'they open' : 'it opens'}.` });
   const subtotal = lines.reduce((x, i) => x + i.price * i.qty, 0), fee = Number((await Setting.findOne())?.deliveryFee ?? 100), delivery = Number.isFinite(fee) && fee >= 0 ? fee : 100;
   const lat = Number(q.body.lat), lng = Number(q.body.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
   const set = (await Setting.findOne())?.toObject() || {}, accts = (set.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!set.advanceEnabled && accts.length > 0, codOn = set.codEnabled !== false || !advOn;
@@ -50,6 +53,7 @@ r.post('/prescription', wrap(async (q, s) => {
   const shop = await Shop.findById(b.shopId); let med = !!shop && (shop.medical || shop.category === 'medical' || (shop.categories || []).includes('medical'));
   if (shop && !med && !shop.typedOrder) { const sid = String(shop._id); med = (await Product.countDocuments({ shopId: sid })) > 0 && (await Product.countDocuments({ shopId: sid, category: { $ne: 'medical' } })) === 0; } // a store whose products are all medicines counts as a medical store
   if (!shop || shop.active === false || !(med || shop.typedOrder)) return bad('This store is not taking typed orders right now.');
+  if (shop.open === false) return bad(`${shop.name} is closed right now and cannot take orders.`);
   if (!med && mode === 'photo') return bad('This store takes typed orders only.');
   const shopId = String(shop._id); let lines = [], images = [], medicines = [];
   if (mode === 'photo') {

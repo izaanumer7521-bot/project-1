@@ -2,7 +2,7 @@
 //  - shopId always comes from the verified login, never from the request body
 //  - every read/update/delete filters by { _id, shopId }, so another shop's product can never be touched
 import { Router } from 'express'; import bcrypt from 'bcryptjs'; import mongoose from 'mongoose';
-import { Admin, Product, Category, Order } from '../models/index.js'; import { vendorOnly, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
+import { Admin, Product, Category, Order, Shop } from '../models/index.js'; import { vendorOnly, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
 const r = Router(); r.use(vendorOnly);
 const bad = (s, m, c = 400) => s.status(c).json({ error: m });
 // Vendors can only send these fields. shopId, bestSeller and hotDeal are never accepted from a vendor.
@@ -31,6 +31,12 @@ function clean(b, full) {
   return u;
 }
 const mine = q => ({ shopId: q.vendor.shopId });
+// Open / close my own shop. While it is closed, customers see a CLOSED stamp and cannot order from it (the server refuses the order too).
+r.get('/shop', wrap(async (q, s) => { const x = await Shop.findById(q.vendor.shopId).select('name open').lean(); s.json({ name: x.name, open: x.open !== false }); }));
+r.put('/shop/open', wrap(async (q, s) => {
+  const open = !!(q.body || {}).open, x = await Shop.findByIdAndUpdate(q.vendor.shopId, { $set: { open } }, { new: true }); if (!x) return bad(s, 'Shop not found', 404);
+  await logAction(q, { entity: 'Vendor', summary: `Vendor "${x.name}" ${open ? 'opened' : 'closed'} the shop` }); s.json({ open });
+}));
 // Reuse the spelling of an existing section of this shop (so "burger" and "Burger" become one chip)
 const fixSection = async (q, u) => { if (u.section) { const ex = (await Product.distinct('section', mine(q))).find(x => x && x.toLowerCase() === u.section.toLowerCase()); if (ex) u.section = ex; } };
 // Orders that contain this shop's products. A vendor only ever sees ITS OWN lines and the amount for them:
