@@ -2,7 +2,7 @@
 //  - shopId always comes from the verified login, never from the request body
 //  - every read/update/delete filters by { _id, shopId }, so another shop's product can never be touched
 import { Router } from 'express'; import bcrypt from 'bcryptjs'; import mongoose from 'mongoose';
-import { Admin, Product, Category, Order, Shop } from '../models/index.js'; import { vendorOnly, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
+import { Admin, Product, Category, Order, Shop } from '../models/index.js'; import { vendorOnly, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js'; import { hrs } from './shops.js'; import { cleanTime, hoursText, isShopOpen } from '../utils/hours.js';
 const r = Router(); r.use(vendorOnly);
 const bad = (s, m, c = 400) => s.status(c).json({ error: m });
 // Vendors can only send these fields. shopId, bestSeller and hotDeal are never accepted from a vendor.
@@ -32,7 +32,14 @@ function clean(b, full) {
 }
 const mine = q => ({ shopId: q.vendor.shopId });
 // Open / close my own shop. While it is closed, customers see a CLOSED stamp and cannot order from it (the server refuses the order too).
-r.get('/shop', wrap(async (q, s) => { const x = await Shop.findById(q.vendor.shopId).select('name open').lean(); s.json({ name: x.name, open: x.open !== false }); }));
+r.get('/shop', wrap(async (q, s) => { const x = await Shop.findById(q.vendor.shopId).select('name open opensAt closesAt').lean(); s.json({ name: x.name, open: x.open !== false, openNow: isShopOpen(x), opensAt: cleanTime(x.opensAt), closesAt: cleanTime(x.closesAt) }); }));
+// My daily opening hours, e.g. 09:00 to 22:00 (send both empty to remove the timing). Outside these hours customers see CLOSED and cannot order.
+r.put('/shop/hours', wrap(async (q, s) => {
+  const h = hrs(q.body || {}); if (!h) return bad(s, 'Please set both an opening and a closing time'); if (h.error) return bad(s, h.error);
+  const old = await Shop.findById(q.vendor.shopId).select('name opensAt closesAt'); if (!old) return bad(s, 'Shop not found', 404);
+  const was = hoursText(old) || 'No timing'; old.opensAt = h.opensAt; old.closesAt = h.closesAt; await old.save();
+  await logAction(q, { entity: 'Vendor', summary: `Vendor "${old.name}" changed shop timing`, changes: [{ field: 'shop timing', from: was, to: hoursText(old) || 'No timing' }] }); s.json({ opensAt: h.opensAt, closesAt: h.closesAt, openNow: isShopOpen(old) });
+}));
 r.put('/shop/open', wrap(async (q, s) => {
   const open = !!(q.body || {}).open, x = await Shop.findByIdAndUpdate(q.vendor.shopId, { $set: { open } }, { new: true }); if (!x) return bad(s, 'Shop not found', 404);
   await logAction(q, { entity: 'Vendor', summary: `Vendor "${x.name}" ${open ? 'opened' : 'closed'} the shop` }); s.json({ open });
@@ -43,7 +50,7 @@ const fixSection = async (q, u) => { if (u.section) { const ex = (await Product.
 // no other shop's items, no order total, no delivery charges, and no customer phone or address.
 r.get('/orders', wrap(async (q, s) => {
   const id = q.vendor.shopId, rows = await Order.find({ 'items.shopId': id }).select('-prescription').sort({ createdAt: -1 }).limit(200), withRx = new Set((await Order.find({ 'items.shopId': id, 'prescription.0': { $exists: true } }).select('_id').lean()).map(x => String(x._id)));
-  s.json(rows.map(o => { const items = (o.items || []).filter(i => i.shopId === id).map(i => ({ name: i.name, price: i.price, qty: i.qty })); return { _id: o._id, code: String(o._id).slice(-5).toUpperCase(), createdAt: o.createdAt, status: o.status || 'New', cancelledBy: o.status === 'Cancelled' ? (o.cancelledBy || '') : '', cancelledAt: o.status === 'Cancelled' ? o.cancelledAt || null : null, customer: o.name, kind: o.kind || 'regular', rxMode: o.rxMode || '', hasRx: withRx.has(String(o._id)), rxNote: o.rxNote || o.note || '', items, subtotal: items.reduce((x, i) => x + i.price * i.qty, 0) }; }));
+  s.json(rows.map(o => { const items = (o.items || []).filter(i => i.shopId === id).map(i => ({ name: i.name, price: i.price, qty: i.qty })); return { _id: o._id, code: String(o._id).slice(-5).toUpperCase(), createdAt: o.createdAt, status: o.status || 'New', cancelledBy: o.status === 'Cancelled' ? (o.cancelledBy || '') : '', cancelledAt: o.status === 'Cancelled' ? o.cancelledAt || null : null, customer: o.name, riderName: o.riderName || '', riderPhone: o.riderPhone || '', kind: o.kind || 'regular', rxMode: o.rxMode || '', hasRx: withRx.has(String(o._id)), rxNote: o.rxNote || o.note || '', items, subtotal: items.reduce((x, i) => x + i.price * i.qty, 0) }; }));
 }));
 // A prescription photo is only visible to the store the customer sent it to
 r.get('/orders/:id/prescription', wrap(async (q, s) => { if (!mongoose.isValidObjectId(q.params.id)) return bad(s, 'Order not found', 404); const o = await Order.findOne({ _id: q.params.id, 'items.shopId': q.vendor.shopId }).select('prescription'); if (!o) return bad(s, 'Order not found', 404); s.json({ images: o.prescription || [] }); }));

@@ -34,3 +34,8 @@
      ADMIN_PASSWORD   a strong password (first login only; change later in Admin > Account)
 4. Deploy. Public site: your-app.vercel.app   Admin: your-app.vercel.app/bd-admin
 Do not set PORT. The frontend calls /api on the same domain, so no other variables are needed.
+
+## Rider on orders, search page, shop timing
+- **Rider info:** in Admin > Orders every order has a "Rider" box (name + phone). The customer sees only that name and phone number on the order receipt, in My Orders and in Notifications (tap to call). Set a *Default rider* in Admin > Settings and every new order gets it automatically; change it on any order when needed. Vendors see the rider on their orders too.
+- **Search page:** tapping the home search bar opens a full Search page (category chips, recent + popular searches, store count, sort, filter, favourite stores). Edit the popular words in `POPULAR` in `frontend/src/pages/Home.jsx`.
+- **Shop timing:** Admin > Vendors (add / edit) and the vendor's own Orders page have "Opens at / Closes at" (any time, e.g. 9 AM to 10 PM; 6 PM to 12:30 AM also works). Times are Pakistan time. Outside the timing the store shows CLOSED and the server refuses orders, on top of the manual Open/Close switch. "No timing" = open whenever the switch is on.

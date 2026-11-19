@@ -11,7 +11,7 @@
 .closedbar{background:#e5484d1a;border:1.5px solid #e5484d;color:var(--ink);border-radius:14px;padding:12px 14px;margin:10px 0;line-height:1.45}
 .ci2.shut{opacity:.55}
 .shopstate{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;border-left:6px solid #00c27a}
-.shopstate.off{border-left-color:#e5484d}
+.shopstate.st-off{border-left-color:#e5484d}
 .shopstate b{display:block;font-size:1.05rem}.shopstate small{display:block;color:var(--muted);margin-top:2px}
 .btn.danger{background:#e5484d!important;color:#fff!important;box-shadow:none!important}
 .imp-pics{display:flex;flex-direction:column;gap:12px}

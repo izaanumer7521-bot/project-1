@@ -1,4 +1,4 @@
-import { Router } from 'express'; import mongoose from 'mongoose'; import { Order, Product, Setting, Shop } from '../models/index.js'; import { notifyOrder } from '../utils/push.js'; import { auth, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js';
+import { Router } from 'express'; import mongoose from 'mongoose'; import { Order, Product, Setting, Shop } from '../models/index.js'; import { notifyOrder } from '../utils/push.js'; import { auth, wrap } from '../middleware/auth.js'; import { diff, logAction } from '../utils/log.js'; import { isShopOpen, withTiming } from '../utils/hours.js';
 const code = o => '#' + String(o._id).slice(-5).toUpperCase(), STATUSES = ['New', 'Confirmed', 'On the way', 'Delivered', 'Cancelled'];
 // Phone number: compulsory. Spaces, dashes and brackets are removed, then 10-15 digits (an optional leading +) are required.
 export const cleanPhone = v => { const p = String(v ?? '').replace(/[\s\-()]/g, ''); return /^\+?\d{10,15}$/.test(p) ? p : ''; };
@@ -25,8 +25,8 @@ r.post('/', wrap(async (q, s) => {
     lines.push({ name: tag ? `${p.name} (${tag})` : p.name, price: opt ? opt.price : p.price, qty, shopId: p.shopId || '', ...(opt && { option: opt.label }), ...(flavor && { flavor }) });
   }
   // A closed shop cannot take orders (the app also hides the buttons, this is the real lock)
-  const sids = [...new Set(lines.map(l => l.shopId).filter(id => mongoose.isValidObjectId(id)))], shut = sids.length ? await Shop.find({ _id: { $in: sids }, open: false }).select('name').lean() : [];
-  if (shut.length) return s.status(400).json({ error: `${shut.map(x => x.name).join(', ')} ${shut.length > 1 ? 'are' : 'is'} closed right now and cannot take orders. Please remove ${shut.length > 1 ? 'their' : 'its'} items from your cart or try again when ${shut.length > 1 ? 'they open' : 'it opens'}.` });
+  const sids = [...new Set(lines.map(l => l.shopId).filter(id => mongoose.isValidObjectId(id)))], shut = sids.length ? (await Shop.find({ _id: { $in: sids } }).select('name open opensAt closesAt').lean()).filter(x => !isShopOpen(x)) : [];
+  if (shut.length) return s.status(400).json({ error: `${shut.map(withTiming).join(', ')} ${shut.length > 1 ? 'are' : 'is'} closed right now and cannot take orders. Please remove ${shut.length > 1 ? 'their' : 'its'} items from your cart or try again when ${shut.length > 1 ? 'they open' : 'it opens'}.` });
   const subtotal = lines.reduce((x, i) => x + i.price * i.qty, 0), fee = Number((await Setting.findOne())?.deliveryFee ?? 100), delivery = Number.isFinite(fee) && fee >= 0 ? fee : 100;
   const lat = Number(q.body.lat), lng = Number(q.body.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
   const set = (await Setting.findOne())?.toObject() || {}, accts = (set.paymentAccounts || []).filter(a => a.accountNumber), advOn = !!set.advanceEnabled && accts.length > 0, codOn = set.codEnabled !== false || !advOn;
@@ -35,7 +35,7 @@ r.post('/', wrap(async (q, s) => {
   if (method === 'advance' && !advOn) return s.status(400).json({ error: 'Advance payment is not available right now. Please choose Cash on Delivery.' });
   if (method === 'cod' && !codOn) return s.status(400).json({ error: 'Cash on Delivery is not available right now. Please pay in advance.' });
   const paymentRef = t(q.body.paymentRef, 80); if (method === 'advance' && !paymentRef) return s.status(400).json({ error: 'Please enter your transaction ID after sending the payment.' });
-  const order = await Order.create({ name, phone, address, note, items: lines, subtotal, delivery, total: subtotal + delivery, paymentMethod: method, paymentStatus: 'Unpaid', paymentRef: method === 'advance' ? paymentRef : '', paymentAccount: method === 'advance' ? t(q.body.paymentAccount, 80) : '', ...geo });
+  const order = await Order.create({ name, phone, address, note, items: lines, subtotal, delivery, total: subtotal + delivery, paymentMethod: method, paymentStatus: 'Unpaid', paymentRef: method === 'advance' ? paymentRef : '', paymentAccount: method === 'advance' ? t(q.body.paymentAccount, 80) : '', riderName: t(set.defaultRiderName, 80), riderPhone: t(set.defaultRiderPhone, 30), ...geo });
   await logAction({ actor: 'Customer' + ' (' + phone + ')' }, { entity: 'Order', summary: `New order ${code(order)} from ${name} – Rs ${order.total}` });
   await notifyOrder(order); // awaited on purpose: Vercel stops the function right after the response is sent (admin + the shop owner(s) are alerted together)
   s.json(order.toObject());
@@ -53,7 +53,7 @@ r.post('/prescription', wrap(async (q, s) => {
   const shop = await Shop.findById(b.shopId); let med = !!shop && (shop.medical || shop.category === 'medical' || (shop.categories || []).includes('medical'));
   if (shop && !med && !shop.typedOrder) { const sid = String(shop._id); med = (await Product.countDocuments({ shopId: sid })) > 0 && (await Product.countDocuments({ shopId: sid, category: { $ne: 'medical' } })) === 0; } // a store whose products are all medicines counts as a medical store
   if (!shop || shop.active === false || !(med || shop.typedOrder)) return bad('This store is not taking typed orders right now.');
-  if (shop.open === false) return bad(`${shop.name} is closed right now and cannot take orders.`);
+  if (!isShopOpen(shop)) return bad(`${shop.name} is closed right now and cannot take orders.${shop.open !== false && withTiming(shop) !== shop.name ? ' Timing: ' + withTiming(shop).slice(shop.name.length + 7, -1) + '.' : ''}`);
   if (!med && mode === 'photo') return bad('This store takes typed orders only.');
   const shopId = String(shop._id); let lines = [], images = [], medicines = [];
   if (mode === 'photo') {
@@ -69,7 +69,7 @@ r.post('/prescription', wrap(async (q, s) => {
   const riderOn = set.riderOnlineEnabled !== false, codOn = set.codEnabled !== false || !riderOn; // prices are not known yet, so advance payment is not offered for prescriptions
   const method = b.paymentMethod === 'rider_online' && riderOn ? 'rider_online' : codOn ? 'cod' : 'rider_online';
   const lat = Number(b.lat), lng = Number(b.lng), geo = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : {};
-  const order = await Order.create({ name, phone, address, note, items: lines, subtotal: 0, delivery, total: delivery, paymentMethod: method, paymentStatus: 'Unpaid', kind: med ? 'prescription' : 'custom', rxShopId: shopId, rxMode: mode, prescription: images, medicines, ...geo });
+  const order = await Order.create({ name, phone, address, note, items: lines, subtotal: 0, delivery, total: delivery, paymentMethod: method, paymentStatus: 'Unpaid', kind: med ? 'prescription' : 'custom', rxShopId: shopId, rxMode: mode, prescription: images, medicines, riderName: t(set.defaultRiderName, 80), riderPhone: t(set.defaultRiderPhone, 30), ...geo });
   await logAction({ actor: 'Customer (' + phone + ')' }, { entity: 'Order', summary: `New ${med ? 'prescription' : 'custom'} order ${code(order)} from ${name} for "${shop.name}" (${mode === 'photo' ? images.length + ' photo(s)' : medicines.length + ' medicine(s) typed'})` });
   await notifyOrder(order);
   const o = order.toObject(); delete o.prescription; s.json({ ...o, hasRx: images.length > 0 });
@@ -84,6 +84,8 @@ r.put('/:id', auth, wrap(async (q, s) => {
   for (const [k, n] of [['name', 100], ['address', 400]]) if (k in b) { u[k] = t(b[k], n); if (!u[k]) return bad(`${k[0].toUpperCase() + k.slice(1)} cannot be empty`); }
   if ('phone' in b) { u.phone = cleanPhone(b.phone); if (!u.phone) return bad(PHONE_ERR); }
   for (const [k, n] of [['note', 300], ['paymentRef', 80], ['paymentAccount', 80]]) if (k in b) u[k] = t(b[k], n);
+  if ('riderName' in b) u.riderName = t(b.riderName, 80);
+  if ('riderPhone' in b) { const rp = t(b.riderPhone, 30); u.riderPhone = rp ? cleanPhone(rp) : ''; if (rp && !u.riderPhone) return bad('Please enter a valid rider phone number (for example 03001234567).'); }
   if ('status' in b) { if (!STATUSES.includes(b.status)) return bad('Invalid status'); u.status = b.status;
     if (b.status === 'Cancelled' && o.status !== 'Cancelled') { u.cancelledBy = 'Admin'; u.cancelledAt = new Date(); }
     if (b.status !== 'Cancelled' && o.status === 'Cancelled') { u.cancelledBy = undefined; u.cancelledAt = undefined; } }
