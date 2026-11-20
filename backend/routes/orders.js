@@ -76,7 +76,10 @@ r.post('/prescription', wrap(async (q, s) => {
 }));
 // Admin: the prescription photos of one order (kept out of the big order list so that stays fast)
 r.get('/:id/prescription', auth, wrap(async (q, s) => { if (!mongoose.isValidObjectId(q.params.id)) return s.status(404).json({ error: 'Order not found' }); const o = await Order.findById(q.params.id).select('prescription'); if (!o) return s.status(404).json({ error: 'Order not found' }); s.json({ images: o.prescription || [] }); }));
-r.get('/', auth, wrap(async (q, s) => { const [rows, withRx] = await Promise.all([Order.find().select('-prescription').sort({ createdAt: -1 }).lean(), Order.find({ 'prescription.0': { $exists: true } }).select('_id').lean()]), has = new Set(withRx.map(x => String(x._id))); s.json(rows.map(o => ({ ...o, hasRx: has.has(String(o._id)) }))); }));
+r.get('/', auth, wrap(async (q, s) => { const [rows, withRx] = await Promise.all([Order.find().select('-prescription').sort({ createdAt: -1 }).lean(), Order.find({ 'prescription.0': { $exists: true } }).select('_id').lean()]), has = new Set(withRx.map(x => String(x._id)));
+  // Which vendor shop does each order come from? Names are looked up from the item's shopId (or the prescription's store); items with no shop are our own products.
+  const ids = [...new Set(rows.flatMap(o => [...(o.items || []).map(i => i.shopId), o.rxShopId]).filter(id => mongoose.isValidObjectId(id)))], names = Object.fromEntries((await Shop.find({ _id: { $in: ids } }).select('name').lean()).map(x => [String(x._id), x.name])), nm = id => (!id ? 'ByDoor (own store)' : names[String(id)] || 'Deleted shop');
+  s.json(rows.map(o => { const items = (o.items || []).map(i => ({ ...i, shopName: nm(i.shopId || (o.kind !== 'regular' ? o.rxShopId : '')) })); return { ...o, items, shopNames: [...new Set(items.map(i => i.shopName))], hasRx: has.has(String(o._id)) }; })); }));
 // Admin can edit every part of an order (customer details, location, items, delivery charges, total, payment)
 r.put('/:id', auth, wrap(async (q, s) => {
   const o = await Order.findById(q.params.id); if (!o) return s.status(404).json({ error: 'Order not found' });

@@ -5,7 +5,7 @@ const SCHEMA = {
   products: [['name', 'Name'], ['category', 'Category', 'select', 'cats'], ['shopId', 'Vendor shop (leave empty for your own product)', 'select', 'shops'], ['section', 'Menu section inside the shop (e.g. Burger, Shawarma, Ice Cream) – customers get a filter for it', 'section'], ['price', 'Price (Rs) – used when there are no sizes below', 'number'], ['options', 'Sizes / portions (optional): Half & Full, Small & Large, scoops…', 'options'], ['flavors', 'Flavours (optional): customers pick one, e.g. for ice cream', 'flavors'], ['oldPrice', 'Old price (optional, shows a % OFF badge)', 'number'], ['unit', 'Unit (per kg, each…)'], ['image', 'Photo', 'image', 600], ['description', 'Description'], ['bestSeller', 'Show in Best Selling', 'bool'], ['hotDeal', 'Show in Hot Deals', 'bool'], ['available', 'In stock', 'bool']],
   vendorProducts: [['name', 'Product name'], ['category', 'Category', 'select', 'cats'], ['section', 'Menu section inside the shop (e.g. Burger, Shawarma, Ice Cream) – customers get a filter for it', 'section'], ['price', 'Price (Rs) – used when there are no sizes below', 'number'], ['options', 'Sizes / portions (optional): Half & Full, Small & Large, scoops…', 'options'], ['flavors', 'Flavours (optional): customers pick one, e.g. for ice cream', 'flavors'], ['oldPrice', 'Old price (optional, shows a % OFF badge)', 'number'], ['unit', 'Unit (per kg, each…)'], ['image', 'Photo', 'image', 600], ['description', 'Description'], ['available', 'In stock', 'bool']],
   reviews: [['name', 'Customer name'], ['rating', 'Rating (1-5)', 'number'], ['text', 'Review', 'area']],
-  categories: [['name', 'Name'], ['key', 'Short code (optional – made automatically from the name)'], ['emoji', 'Emoji icon (used when no photo)'], ['image', 'Photo (optional)', 'image', 500], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
+  categories: [['name', 'Name'], ['ride', 'Ride booking category (customers book a Bike / Rickshaw here instead of seeing stores)', 'bool'], ['key', 'Short code (optional – made automatically from the name)'], ['emoji', 'Emoji icon (used when no photo)'], ['image', 'Photo (optional)', 'image', 500], ['sort', 'Order (1 = first)', 'number'], ['active', 'Show on website', 'bool']],
 };
 // Editor for product sizes: quick presets + editable rows (name + price)
 const PRESETS = [['Half / Full', ['Half', 'Full']], ['Small / Large', ['Small', 'Large']], ['Small / Medium / Large', ['Small', 'Medium', 'Large']], ['1 / 2 / 3 Scoops', ['1 Scoop', '2 Scoops', '3 Scoops']]];
@@ -75,7 +75,7 @@ const fl = k => FL[k] || k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpp
 function Logs() {
   const [d, setD] = useState(null), [page, setPage] = useState(1), [ent, setEnt] = useState(''), [err, setErr] = useState('');
   useEffect(() => { setErr(''); api(`logs?page=${page}${ent ? '&entity=' + ent : ''}`).then(setD).catch(x => setErr(x.message)); }, [page, ent]);
-  return (<div><select className="filt" value={ent} onChange={e => { setEnt(e.target.value); setPage(1); }}><option value="">All changes</option>{['Order', 'Customer', 'Product', 'Banner', 'Category', 'Review', 'Settings', 'Account'].map(x => <option key={x}>{x}</option>)}</select>
+  return (<div><select className="filt" value={ent} onChange={e => { setEnt(e.target.value); setPage(1); }}><option value="">All changes</option>{['Order', 'Ride', 'Customer', 'Product', 'Banner', 'Category', 'Review', 'Settings', 'Account'].map(x => <option key={x}>{x}</option>)}</select>
     {err && <p className="err">{err}</p>}{!d && !err && <p>Loading…</p>}
     {d && <><div className="list">{d.rows.map(l => <div key={l._id} className="card logrow"><div className="lh"><b>{l.summary}</b><small>{dt(l.createdAt)} · by {l.actor}</small></div>
       {l.changes?.map((c, k) => <div key={k} className="chg"><span>{fl(c.field)}</span><s>{c.field === 'paymentMethod' ? PAY[c.from] || c.from : c.from}</s><em>→</em><u>{c.field === 'paymentMethod' ? PAY[c.to] || c.to : c.to}</u></div>)}</div>)}{!d.rows.length && <p>No activity recorded yet. Changes you make from now on will show here.</p>}</div>
@@ -106,7 +106,7 @@ function Settings() {
     {m && <p className="err">{m}</p>}<button className="btn">Save settings</button></form>);
 }
 function Crud({ path, schema, base = path }) {
-  const fields = SCHEMA[schema || path], blank = Object.fromEntries(fields.map(([k, , t]) => [k, t === 'bool' ? true : t === 'options' || t === 'flavors' ? [] : '']));
+  const fields = SCHEMA[schema || path], blank = Object.fromEntries(fields.map(([k, , t]) => [k, t === 'bool' ? k !== 'ride' : t === 'options' || t === 'flavors' ? [] : '']));
   const [rows, setRows] = useState([]), [f, setF] = useState(blank), [err, setErr] = useState(''), [cats, setCats] = useState([]), [shops, setShops] = useState([]);
   const load = () => api(base).then(setRows); useEffect(() => { setF(blank); load(); api('categories').then(d => setCats(d.map(c => [c.key, c.name]))); if (path === 'products') api('shops').then(d => setShops(d.map(x => [x._id, x.name]))).catch(() => {}); }, [path]);
   // sections already used in the chosen shop (admin) or in my shop (vendor)
@@ -186,17 +186,41 @@ function CancelBanner({ o }) {
 function OrderBill({ o }) {
   const open = !o.subtotal && (o.kind === 'prescription' || o.kind === 'custom'), sub = o.subtotal != null ? o.subtotal : o.items.reduce((x, i) => x + i.price * i.qty, 0);
   return (<div className="obill"><div className="oh"><span>Item</span><span>Qty</span><span>Price</span></div>
-    {o.items.map((i, k) => <div key={k} className="oi"><span>{i.name}</span><span>×{i.qty}</span><span>{open ? '—' : rs(i.price * i.qty)}</span></div>)}
+    {o.items.map((i, k) => <div key={k} className="oi"><span>{i.name}{i.shopName && (o.shopNames || []).length > 1 && <small className="fromshop"> · 🏪 {i.shopName}</small>}</span><span>×{i.qty}</span><span>{open ? '—' : rs(i.price * i.qty)}</span></div>)}
     {open ? <div className="ot"><span>Delivery</span><span /><span>{rs(o.delivery)}</span></div> : <>
       <div className="os"><span>Subtotal</span><span /><span>{rs(sub)}</span></div>
       {o.delivery != null && <div className="os"><span>Delivery</span><span /><span>{rs(o.delivery)}</span></div>}
       <div className="ot"><span>Total</span><span /><span>{rs(o.total)}</span></div></>}
     {open && <small className="muted">Item prices are confirmed by phone with the customer.</small>}</div>);
 }
+// ---- Rides (bike / rickshaw). One active ride per vehicle: it stays "Busy" for customers until you press "Ride complete" (or cancel it).
+const VEH = { bike: ['🏍️', 'Bike'], rickshaw: ['🛺', 'Rickshaw'] }, RIDE_ST = ['Requested', 'Accepted', 'On the way', 'Completed', 'Cancelled'];
+function RideRow({ r, load }) {
+  const [fare, setFare] = useState(r.fare ?? ''), [err, setErr] = useState(''), [busy, setBusy] = useState(false), [ico, vn] = VEH[r.vehicle] || ['🛺', r.vehicle];
+  const put = async body => { setBusy(true); setErr(''); try { await api('rides/' + r._id, 'PUT', body); await load(); } catch (x) { setErr(x.message); } setBusy(false); };
+  return (<div className={'card ocard2 ridecard' + (r.active ? ' liveride' : '') + (r.status === 'Cancelled' ? ' cancelled' : '')}>
+    <div className="ohead"><b>{ico} {vn} · {r.name}</b><span className={'pill ' + (r.status === 'Completed' ? 'ok' : r.status === 'Cancelled' ? 'bad' : r.status === 'Requested' ? 'warn' : '')}>{r.status}</span></div>
+    <a className="ophone" href={`tel:${r.phone}`}>📞 {r.phone}</a><small className="when">Ride #{String(r._id).slice(-5).toUpperCase()} · {dt(r.createdAt)}</small>
+    {r.status === 'Cancelled' && <div className={'cxl' + (r.cancelledBy === 'Customer' ? ' bycust' : '')}><b>❌ Cancelled by {r.cancelledBy === 'Customer' ? 'the customer' : 'admin'}</b></div>}
+    <p className="rline"><b>From:</b> {r.pickup}{r.pickupLat != null && r.pickupLng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${r.pickupLat},${r.pickupLng}`}>map</a></>}</p><p className="rline"><b>To:</b> {r.dropoff}</p>{r.note && <p className="rline"><b>Note:</b> {r.note}</p>}
+    <div className="fareline"><label>Agreed fare (Rs, after the phone call)<input type="number" min="0" step="any" value={fare} onChange={e => setFare(e.target.value)} /></label><button type="button" className="ebtn" disabled={busy || String(fare) === String(r.fare ?? '')} onClick={() => put({ fare })}>Save fare</button></div>
+    <div className="rideacts">{r.active && <>{r.status === 'Requested' && <button type="button" disabled={busy} onClick={() => put({ status: 'Accepted' })}>Accept</button>}{r.status !== 'On the way' && <button type="button" disabled={busy} onClick={() => put({ status: 'On the way' })}>Ride started</button>}<button type="button" className="btn okbtn" disabled={busy} onClick={() => put({ status: 'Completed' })}>✅ Ride complete</button></>}
+      <select value={r.status} disabled={busy} onChange={e => put({ status: e.target.value })}>{RIDE_ST.map(x => <option key={x}>{x}</option>)}</select>
+      <button type="button" className="dbtn" onClick={async () => { if (confirm('Delete this ride record?')) { await api('rides/' + r._id, 'DELETE'); load(); } }}>Delete</button></div>{err && <p className="err">{err}</p>}</div>);
+}
+function Rides() {
+  const [rows, setRows] = useState(null), [err, setErr] = useState(''), load = () => api('rides').then(d => { setRows(d); setErr(''); }).catch(x => setErr(x.message));
+  useEffect(() => { load(); const id = setInterval(load, 20000); return () => clearInterval(id); }, []);
+  const live = v => (rows || []).find(r => r.active && r.vehicle === v);
+  return (<div><div className="vstat">{Object.entries(VEH).map(([k, [ico, n]]) => { const r = live(k); return <div key={k} className={'card vcard ' + (r ? 'busy' : 'free')}><b>{ico} {n}</b><span>{r ? `🔴 Busy · ${r.name}` : '🟢 Free: customers can book'}</span>{r && <small>Customers cannot book this {n.toLowerCase()} until you press “Ride complete” (or cancel) on that ride.</small>}</div>; })}</div>
+    <div className="row" style={{ marginBottom: 10 }}><button className="btn ghost" onClick={load}>Refresh</button><small className="muted2">Updates by itself every 20 seconds</small></div>
+    {err && <p className="err">{err}</p>}{!rows && !err && <p>Loading…</p>}
+    <div className="list">{rows && rows.map(r => <RideRow key={r._id + r.updatedAt} r={r} load={load} />)}{rows && !rows.length && <p>No ride requests yet.</p>}</div></div>);
+}
 function Orders() {
   const [rows, setRows] = useState([]), [edit, setEdit] = useState(null); const load = () => api('orders').then(setRows); useEffect(() => { load(); }, []);
   const riders = [...new Map(rows.filter(o => o.riderName).map(o => [o.riderName, { name: o.riderName, phone: o.riderPhone || '' }])).values()];
-  return (<div className="list"><datalist id="riderlist">{riders.map(r => <option key={r.name} value={r.name} />)}</datalist>{rows.map(o => <div key={o._id} className={'card ocard2' + (o.status === 'Cancelled' ? ' cancelled' : '')}><div className="ohead"><b>{o.name}</b><span className={'pill ' + (o.status === 'Delivered' ? 'ok' : o.status === 'Cancelled' ? 'bad' : o.status === 'New' ? 'warn' : '')}>{o.status || 'New'}</span></div><a className="ophone" href={`tel:${o.phone}`}>📞 {o.phone}</a><small className="when">Order #{o._id.slice(-5).toUpperCase()} · {dt(o.createdAt)}</small><CancelBanner o={o} /><p>{o.address}{o.note && ` (${o.note})`}{o.lat != null && o.lng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${o.lat},${o.lng}`}>map</a></>}</p>
+  return (<div className="list"><datalist id="riderlist">{riders.map(r => <option key={r.name} value={r.name} />)}</datalist>{rows.map(o => <div key={o._id} className={'card ocard2' + (o.status === 'Cancelled' ? ' cancelled' : '')}><div className="ohead"><b>{o.name}</b><span className={'pill ' + (o.status === 'Delivered' ? 'ok' : o.status === 'Cancelled' ? 'bad' : o.status === 'New' ? 'warn' : '')}>{o.status || 'New'}</span></div><a className="ophone" href={`tel:${o.phone}`}>📞 {o.phone}</a><small className="when">Order #{o._id.slice(-5).toUpperCase()} · {dt(o.createdAt)}</small><CancelBanner o={o} />{!!o.shopNames?.length && <div className="fromshopbar">🏪 <span>Order from:</span> <b>{o.shopNames.join(' + ')}</b></div>}<p>{o.address}{o.note && ` (${o.note})`}{o.lat != null && o.lng != null && <> · <a className="maplink" target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${o.lat},${o.lng}`}>map</a></>}</p>
     {(o.kind === 'prescription' || o.kind === 'custom') && <RxView o={o} prefix="orders" />}
     <OrderBill o={o} />
     <p><span className={'pill ' + (o.paymentStatus === 'Paid' ? 'ok' : o.paymentMethod === 'advance' ? 'warn' : '')}>{PAY[o.paymentMethod || 'cod']} · {o.paymentStatus || 'Unpaid'}</span>{o.paymentRef && <small> TID: {o.paymentRef}{o.paymentAccount && ' → ' + o.paymentAccount}</small>}</p>
@@ -275,9 +299,9 @@ function VendorAccount() {
     <label>New password (8+ characters)<input type="password" required minLength={8} value={f.newPassword} onChange={e => setF({ ...f, newPassword: e.target.value })} /></label>
     {m && <p className="err">{m}</p>}<button className="btn">Save</button></form>);
 }
-const IC = { dashboard: '📊', orders: '🧾', products: '📦', import: '📥', pictures: '📷', shops: '🏪', banners: '🖼️', categories: '🗂️', reviews: '⭐', customers: '👥', logs: '📜', settings: '⚙️', account: '🔐', vorders: '🧾', vproducts: '📦', vaccount: '🔐' };
+const IC = { dashboard: '📊', rides: '🛺', orders: '🧾', products: '📦', import: '📥', pictures: '📷', shops: '🏪', banners: '🖼️', categories: '🗂️', reviews: '⭐', customers: '👥', logs: '📜', settings: '⚙️', account: '🔐', vorders: '🧾', vproducts: '📦', vaccount: '🔐' };
 const Bar = ({ open, setOpen, title }) => <><header className="atop"><button type="button" aria-label="Menu" className={'burger' + (open ? ' x' : '')} onClick={() => setOpen(!open)}><i /><i /><i /></button><b>{title}</b><ThemeToggle /></header><div className={'scrim' + (open ? ' on' : '')} onClick={() => setOpen(false)} /></>;
-const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['products', 'Products'], ['import', 'Import menu'], ['pictures', 'Import pictures'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
+const ADMIN_TABS = [['dashboard', 'Dashboard'], ['orders', 'Orders'], ['rides', 'Rides'], ['products', 'Products'], ['import', 'Import menu'], ['pictures', 'Import pictures'], ['shops', 'Vendors'], ['banners', 'Banners'], ['categories', 'Categories'], ['reviews', 'Reviews'], ['customers', 'Customers'], ['logs', 'Activity log'], ['settings', 'Settings'], ['account', 'Account']];
 const VENDOR_TABS = [['vorders', 'Orders'], ['vproducts', 'My products'], ['vaccount', 'Account']];
 export default function Admin() {
   const [email, setEmail] = useState(null), [role, setRole] = useState('admin'), [shopName, setShopName] = useState(''), [tab, setTab] = useState('dashboard'), [open, setOpen] = useState(false), [f, setF] = useState({ email: '', password: '' }), [err, setErr] = useState('');
@@ -296,5 +320,5 @@ export default function Admin() {
   return (<div className="adm"><Bar open={open} setOpen={setOpen} title="ByDoor Admin" /><aside className={open ? 'open' : ''}><Logo small /><small>{email}</small>
     {ADMIN_TABS.map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setOpen(false); }}><span>{IC[k]}</span>{n}</button>)}
     <div className="sidetgl"><ThemeToggle /><span>Light / Dark mode</span></div><button onClick={logout}>Log out</button></aside>
-    <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'customers' ? <Customers /> : tab === 'import' ? <MenuImport /> : tab === 'pictures' ? <div className="imp"><ImageImport /></div> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
+    <main><h2>{(ADMIN_TABS.find(x => x[0] === tab) || [, tab])[1]}</h2>{tab === 'dashboard' ? <Dashboard /> : tab === 'logs' ? <Logs /> : tab === 'orders' ? <Orders /> : tab === 'rides' ? <Rides /> : tab === 'customers' ? <Customers /> : tab === 'import' ? <MenuImport /> : tab === 'pictures' ? <div className="imp"><ImageImport /></div> : tab === 'shops' ? <Shops /> : tab === 'settings' ? <Settings /> : tab === 'account' ? <Account email={email} setEmail={setEmail} /> : <Crud key={tab} path={tab} />}</main></div>);
 }

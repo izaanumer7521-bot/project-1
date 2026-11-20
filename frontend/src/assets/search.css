@@ -81,3 +81,39 @@
 .spcount b{font-size:1rem}
 .spsort select{max-width:112px}
 @media(max-width:380px){.spsort{font-size:.85rem}.spcount{gap:6px}}
+/* admin: which vendor shop an order comes from */
+.fromshopbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--c1) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--c1) 40%,transparent);color:var(--ink)}
+.fromshopbar span{color:var(--muted);font-size:.85rem}.fromshopbar b{font-size:1rem}
+.fromshop{color:var(--c1);font-weight:700}
+/* ===== Ride booking (customer) ===== */
+.ride{margin-bottom:24px}
+.rhead h3{font-size:1.3rem;font-weight:800;margin:6px 0 4px}.rhead p{color:var(--muted);margin:0 0 12px;line-height:1.45}
+.vehs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.veh{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 8px;border-radius:20px;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;transition:transform .15s,box-shadow .2s}
+.veh .vi{font-size:2.4rem;line-height:1}.veh b{font-size:1.05rem}.veh em{font-style:normal;font-size:.85rem;font-weight:700;color:var(--muted)}
+.veh.on{border-color:var(--c1);box-shadow:0 0 0 3px #00c27a30,0 8px 22px #00c27a33;transform:translateY(-2px)}
+.veh.busy em{color:#e5484d}
+.rideform{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px}
+.rideform input{padding:13px 14px;font-size:1rem}
+.rl{font-weight:800;margin-top:4px;color:var(--ink)}
+.rquick{display:flex;flex-wrap:wrap;gap:8px}
+.rquick button{border:1.5px solid var(--c1);background:color-mix(in srgb,var(--c1) 10%,var(--surface));color:var(--ink);border-radius:999px;padding:9px 14px;font-weight:700;cursor:pointer}
+.rgeo{color:var(--c1);font-weight:600}
+.rfare{margin:2px 0;color:var(--muted);font-size:.9rem;line-height:1.4}
+.rdone{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,#16a34a 14%,var(--surface));border:1.5px solid #16a34a88;line-height:1.45}
+.rdone a{color:var(--c1);font-weight:700}
+.myrides{margin-top:18px}
+.ridec{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.ridec.live{border-color:var(--c1);box-shadow:0 0 0 2px #00c27a26}
+.ridec .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.ridec .rto{margin:3px 0}.ridec .rto span{display:inline-block;min-width:42px;color:var(--muted);font-size:.8rem;font-weight:700;text-transform:uppercase}
+.ridec .rst{margin:8px 0 2px;font-weight:600}
+/* ===== Ride booking (admin) ===== */
+.vstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
+.vcard{display:flex;flex-direction:column;gap:4px;border-left:6px solid #00c27a;margin:0}.vcard.busy{border-left-color:#e5484d}
+.vcard b{font-size:1.1rem}.vcard span{font-weight:700}
+.ridecard.liveride{border-left:5px solid #f5a524}
+.ridecard .rline{margin:4px 0}
+.fareline{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:8px 0}.fareline label{flex:1 1 200px}.fareline input{width:100%;box-sizing:border-box}
+.rideacts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.rideacts .okbtn{padding:9px 16px;font-size:.95rem;box-shadow:none}

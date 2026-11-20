@@ -39,3 +39,9 @@ Do not set PORT. The frontend calls /api on the same domain, so no other variabl
 - **Rider info:** in Admin > Orders every order has a "Rider" box (name + phone). The customer sees only that name and phone number on the order receipt, in My Orders and in Notifications (tap to call). Set a *Default rider* in Admin > Settings and every new order gets it automatically; change it on any order when needed. Vendors see the rider on their orders too.
 - **Search page:** tapping the home search bar opens a full Search page (category chips, recent + popular searches, store count, sort, filter, favourite stores). Edit the popular words in `POPULAR` in `frontend/src/pages/Home.jsx`.
 - **Shop timing:** Admin > Vendors (add / edit) and the vendor's own Orders page have "Opens at / Closes at" (any time, e.g. 9 AM to 10 PM; 6 PM to 12:30 AM also works). Times are Pakistan time. Outside the timing the store shows CLOSED and the server refuses orders, on top of the manual Open/Close switch. "No timing" = open whenever the switch is on.
+
+## Bike / rickshaw booking
+- The existing **Rickshaw Pick & Drop** category now opens a booking page (Bike or Rickshaw, pick-up place, destination, optional note, "use my current location" / "from my house"). To use another category for this, tick **Ride booking** on it in Admin > Categories.
+- No price is shown: the rider calls the customer and agrees the fare. Admin writes the agreed fare on the ride (Admin > Rides).
+- **One ride at a time per vehicle:** while a ride is Requested / Accepted / On the way, that vehicle shows "Busy" and nobody else can book it (the database enforces this too). It becomes free when you press **Ride complete** (or Cancel) in Admin > Rides. The customer can also cancel before the ride starts.
+- Admin phones get a push alert for every new ride request.
