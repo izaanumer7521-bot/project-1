@@ -3,7 +3,7 @@
 // it is free again when the admin marks the ride Completed (or Cancelled).
 import { Router } from 'express'; import mongoose from 'mongoose';
 import { Ride } from '../models/index.js'; import { auth, wrap } from '../middleware/auth.js'; import { cleanPhone } from './orders.js'; import { logAction } from '../utils/log.js'; import { notifyRide } from '../utils/push.js';
-export const VEHICLES = { bike: 'Bike', rickshaw: 'Rickshaw' }, STATUSES = ['Requested', 'Accepted', 'On the way', 'Completed', 'Cancelled'];
+export const VEHICLES = { bike: 'Bike', rickshaw: 'Rickshaw', car: 'Car' }, STATUSES = ['Requested', 'Accepted', 'On the way', 'Completed', 'Cancelled'];
 const r = Router(), t = (v, n) => String(v ?? '').trim().slice(0, n), code = x => '#' + String(x._id).slice(-5).toUpperCase(), bad = (s, m, c = 400) => s.status(c).json({ error: m });
 const busyMsg = v => `Our ${VEHICLES[v].toLowerCase()} is already booked by another customer right now. Please try again when that ride is finished.`;
 // What a customer may see about a ride (no other customer's data is ever sent)
@@ -12,7 +12,7 @@ const pub = x => ({ _id: x._id, code: String(x._id).slice(-5).toUpperCase(), veh
 r.get('/status', wrap(async (q, s) => { const live = await Ride.find({ active: true }).select('vehicle').lean(); s.set('Cache-Control', 'no-store'); s.json(Object.fromEntries(Object.keys(VEHICLES).map(v => [v, { busy: live.some(x => x.vehicle === v) }]))); }));
 r.post('/', wrap(async (q, s) => {
   const b = q.body || {}, vehicle = VEHICLES[b.vehicle] ? b.vehicle : '', name = t(b.name, 100), phone = cleanPhone(b.phone), pickup = t(b.pickup, 300), dropoff = t(b.dropoff, 300), note = t(b.note, 300);
-  if (!vehicle) return bad(s, 'Please choose Bike or Rickshaw'); if (!String(b.phone ?? '').trim()) return bad(s, 'Phone number is required so the rider can call you with the fare.');
+  if (!vehicle) return bad(s, 'Please choose Bike, Rickshaw or Car'); if (!String(b.phone ?? '').trim()) return bad(s, 'Phone number is required so the rider can call you with the fare.');
   if (!phone) return bad(s, 'Please enter a valid phone number (for example 03001234567).'); if (!name) return bad(s, 'Please enter your name');
   if (!pickup) return bad(s, 'Please tell us where to pick you up'); if (!dropoff) return bad(s, 'Please tell us where you want to go');
   const lat = Number(b.lat), lng = Number(b.lng), geo = b.lat != null && Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { pickupLat: lat, pickupLng: lng } : {};

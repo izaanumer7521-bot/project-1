@@ -37,8 +37,8 @@ export async function notifyOrder(o, cancelled = false) {
 // A customer booked (or cancelled) a bike / rickshaw ride: alert the platform admin's phones.
 export async function notifyRide(r, cancelled = false) {
   try {
-    const code = String(r._id).slice(-5).toUpperCase(), veh = r.vehicle === 'bike' ? 'Bike' : 'Rickshaw', subs = await AdminSubscription.find({ role: { $ne: 'vendor' } });
-    const payload = { title: cancelled ? `❌ ${veh} ride #${code} cancelled by customer` : `${r.vehicle === 'bike' ? '🏍️' : '🛺'} New ${veh} ride request #${code}`, body: `${r.name} · ${r.pickup} → ${r.dropoff}`.slice(0, 180), orderId: 'RIDE-' + code, total: 0, url: '/bd-admin' };
+    const code = String(r._id).slice(-5).toUpperCase(), veh = { bike: 'Bike', rickshaw: 'Rickshaw', car: 'Car' }[r.vehicle] || 'Ride', ico = { bike: '🏍️', rickshaw: '🛺', car: '🚗' }[r.vehicle] || '🛺', subs = await AdminSubscription.find({ role: { $ne: 'vendor' } });
+    const payload = { title: cancelled ? `❌ ${veh} ride #${code} cancelled by customer` : `${ico} New ${veh} ride request #${code}`, body: `${r.name} · ${r.pickup} → ${r.dropoff}`.slice(0, 180), orderId: 'RIDE-' + code, total: 0, url: '/bd-admin' };
     return await deliver(subs.map(sub => ({ sub, payload })));
   } catch (e) { console.error('Ride push error:', e.message); return { sent: 0, reason: e.message }; }
 }

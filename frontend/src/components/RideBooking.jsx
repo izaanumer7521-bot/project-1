@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'; import { api } from '../utils/api.js';
 // Book a bike or rickshaw. The fare is agreed on a phone call. Only ONE ride per vehicle can be active at a time:
 // while someone's ride is open, the vehicle shows "Busy" and nobody else can book it, until the admin marks that ride complete.
-const VEH = { bike: ['🏍️', 'Bike'], rickshaw: ['🛺', 'Rickshaw'] };
+const VEH = { bike: ['🏍️', 'Bike'], rickshaw: ['🛺', 'Rickshaw'], car: ['🚗', 'Car'] };
 const STEXT = { Requested: 'Waiting for the rider to call you', Accepted: 'Accepted. The rider will call you with the fare', 'On the way': 'Your ride is on the way', Completed: 'Ride completed', Cancelled: 'Cancelled' };
 const jget = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const rs = n => 'Rs ' + Number(n || 0).toLocaleString();
@@ -38,7 +38,7 @@ export default function RideBooking({ user, profile, phone }) {
       localStorage.setItem('bd_rides', JSON.stringify([d._id, ...jget('bd_rides', [])].slice(0, 30))); setF(x => ({ ...x, pickup: '', dropoff: '', note: '' })); setGeo(null); setDone(true); load(); } catch (x) { setMsg(x.message); }
     poll(); setBusy(false); };
   return (<div className="ride">
-    <div className="rhead"><h3>🛺 Book a Bike or Rickshaw</h3><p>Tell us where to pick you up and where you want to go. The rider will call you to agree on the fare.</p></div>
+    <div className="rhead"><h3>🛺 Book a Bike, Rickshaw or Car</h3><p>Tell us where to pick you up and where you want to go. The rider will call you to agree on the fare.</p></div>
     <div className="vehs" role="radiogroup" aria-label="Choose a vehicle">{Object.entries(VEH).map(([k, [ic, n]]) => <button type="button" role="radio" aria-checked={veh === k} key={k} className={'veh' + (veh === k ? ' on' : '') + (taken(k) ? ' busy' : '')} onClick={() => { setVeh(k); setMsg(''); setDone(false); }}><span className="vi">{ic}</span><b>{n}</b><em>{avail === null ? '…' : taken(k) ? '🔴 Busy right now' : '🟢 Available'}</em></button>)}</div>
     {mineNow ? <div className="closedbar" role="status">✅ <b>You already have a {vn.toLowerCase()} ride booked.</b> Status: {mineNow.status}. You can book again when it is finished.</div>
       : blocked ? <div className="closedbar" role="status">🔴 <b>Our {vn.toLowerCase()} is on another ride right now.</b> It can be booked again as soon as that ride is finished. This page updates by itself.</div>

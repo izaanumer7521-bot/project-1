@@ -194,7 +194,7 @@ function OrderBill({ o }) {
     {open && <small className="muted">Item prices are confirmed by phone with the customer.</small>}</div>);
 }
 // ---- Rides (bike / rickshaw). One active ride per vehicle: it stays "Busy" for customers until you press "Ride complete" (or cancel it).
-const VEH = { bike: ['🏍️', 'Bike'], rickshaw: ['🛺', 'Rickshaw'] }, RIDE_ST = ['Requested', 'Accepted', 'On the way', 'Completed', 'Cancelled'];
+const VEH = { bike: ['🏍️', 'Bike'], rickshaw: ['🛺', 'Rickshaw'], car: ['🚗', 'Car'] }, RIDE_ST = ['Requested', 'Accepted', 'On the way', 'Completed', 'Cancelled'];
 function RideRow({ r, load }) {
   const [fare, setFare] = useState(r.fare ?? ''), [err, setErr] = useState(''), [busy, setBusy] = useState(false), [ico, vn] = VEH[r.vehicle] || ['🛺', r.vehicle];
   const put = async body => { setBusy(true); setErr(''); try { await api('rides/' + r._id, 'PUT', body); await load(); } catch (x) { setErr(x.message); } setBusy(false); };
